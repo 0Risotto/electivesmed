@@ -1,0 +1,14 @@
+# Who you are and what you are scouting for. The agents and scorer read this.
+name: "Your Name"
+goal: "Find hospitals, staff, and opportunities that match my preferences and introduce myself."
+ask: "Would you be open to a short 15-minute call next week?"
+tone: "professional, warm, concise"
+language: "en"
+
+# Used for scoring and for the scout agent's search focus.
+specialties: []        # e.g. ["cardiology", "emergency medicine"]
+target_roles: []       # e.g. ["Chief Medical Officer", "Department Chair", "Recruiter"]
+locations: []          # e.g. ["California", "Texas"]
+hospital_types: []     # e.g. ["Acute Care Hospitals", "Critical Access Hospitals"]
+must_haves: []         # e.g. ["teaching hospital"]
+avoid: []              # e.g. ["for-profit chains"]

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hospital-outreach"
+version = "0.1.0"
+description = "Local-first hospital scouting and personalized outreach agent"
+requires-python = ">=3.12"
+dependencies = [
+  "strands-agents[litellm]>=1.0.0",
+  "pydantic>=2.5",
+  "PyYAML>=6.0",
+  "typer>=0.12",
+  "rich>=13.0",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+ho = "hospital_outreach.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]

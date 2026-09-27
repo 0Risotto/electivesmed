@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+.env
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/cache/
+data/exports/
+nohup.out
+.DS_Store

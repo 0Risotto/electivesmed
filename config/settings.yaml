@@ -1,0 +1,33 @@
+# App settings. Secrets never go here; use .env.
+sender:
+  name: "Your Name"
+  role: "Your Role"
+  email: ""            # e.g. you@yourdomain.com (SMTP_FROM in .env overrides)
+  reply_to: ""
+  organization: ""
+  postal_address: ""   # required by CAN-SPAM for commercial email footers
+
+limits:
+  daily_send_cap: 50
+  per_domain_cap: 2
+  min_delay_seconds: 60
+  max_delay_seconds: 180
+
+model:
+  chat: "deepseek/deepseek-chat"
+  reasoner: "deepseek/deepseek-reasoner"
+  temperature: 0.4
+
+sending:
+  dry_run_default: true
+  include_opt_out: true
+
+smtp:
+  host: ""             # SMTP_HOST in .env overrides
+  port: 587
+  user: ""             # SMTP_USER in .env overrides
+  from_email: ""
+
+sources:
+  cms_url: "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
+  user_agent: "hospital-outreach/0.1 (local research tool; contact: set-sender-email)"
