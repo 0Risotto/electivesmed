@@ -238,6 +238,7 @@ Back up `data/electivesmed.db` and `data/*.key`; that pair contains everything.
 | `DEEPSEEK_API_KEY is not set` | Add it in Settings or `.env`; scouting/generation/LLM scoring need it (heuristic scoring and ingest do not) |
 | Sends show `deferred` | Recipient-local time is outside the send window; wait or use `--force-window` |
 | Sends show `denied` | Read the reason: approval, suppression, jurisdiction basis, missing postal address, caps, or style violations |
+| "invalid username or password" with a correct password | Run `el doctor`: if `pepper_key.present` is false, the pepper was deleted/rotated, so stored hashes can never verify. Reset with `el user set-password -u YOURNAME`. Also confirm you are using the same `EL_DB_PATH` where the account was created. |
 | SMTP fails | Use the Test SMTP button; check app password (Gmail needs 2FA + app password) and provider limits |
 | LLM errors | Check Settings → Test DeepSeek; verify the key and credits |
 | Slow first agent run | The first run builds the model and imports the LLM stack (~3–5 s), then it is fast |

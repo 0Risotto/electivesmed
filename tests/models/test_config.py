@@ -74,3 +74,10 @@ def test_attachments_and_web_defaults():
     assert settings.attachments.max_file_mb == 10
     assert settings.attachments.max_total_mb == 20
     assert settings.web.require_login is True
+
+
+def test_web_lockout_defaults():
+    web = Settings().web
+
+    assert web.login_attempts == 10
+    assert web.lockout_seconds == 120

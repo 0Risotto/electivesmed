@@ -41,13 +41,34 @@
 </section>
 
 <section class="grid grid-kpi">
-  <div class="card kpi"><span class="num tnum">{{ summary.hospitals }}</span><span class="label">Hospitals</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.contacts }}</span><span class="label">Contacts</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.contacts_scored }}</span><span class="label">Scored</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.drafts_pending }}</span><span class="label">Pending drafts</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.drafts_approved }}</span><span class="label">Approved</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.sent_today }}/{{ summary.daily_cap }}</span><span class="label">Sent today</span></div>
-  <div class="card kpi"><span class="num tnum">{{ summary.suppressed }}</span><span class="label">Suppressed</span></div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-source"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.hospitals }}</span><span class="label">Hospitals</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-contacts"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.contacts }}</span><span class="label">Contacts</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-tune"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.contacts_scored }}</span><span class="label">Scored</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-drafts"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.drafts_pending }}</span><span class="label">Pending drafts</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-check"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.drafts_approved }}</span><span class="label">Approved</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-send"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.sent_today }}/{{ summary.daily_cap }}</span><span class="label">Sent today</span></div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-close"></use></svg></span>
+    <div class="kpi-body"><span class="num tnum">{{ summary.suppressed }}</span><span class="label">Suppressed</span></div>
+  </div>
 </section>
 
 <div class="grid grid-2">

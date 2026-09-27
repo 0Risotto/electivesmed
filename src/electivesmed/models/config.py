@@ -89,6 +89,8 @@ class ComplianceConfig(BaseModel):
 
 class WebConfig(BaseModel):
     require_login: bool = True
+    login_attempts: int = 10
+    lockout_seconds: int = 120
 
 
 class AttachmentConfig(BaseModel):

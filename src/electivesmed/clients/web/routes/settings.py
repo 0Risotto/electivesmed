@@ -127,6 +127,8 @@ def save_config(
     eu_policy: str = Form("block"),
     us_policy: str = Form("block"),
     retention_days: int = Form(730),
+    login_attempts: int = Form(10),
+    lockout_seconds: int = Form(120),
     attachment_defaults: list[str] = Form(default=[]),
     max_files: int = Form(5),
     max_file_mb: int = Form(10),
@@ -171,6 +173,10 @@ def save_config(
             "eu_policy": eu_policy,
             "us_policy": us_policy,
             "retention_days": retention_days,
+        },
+        "web": {
+            "login_attempts": login_attempts,
+            "lockout_seconds": lockout_seconds,
         },
         "attachments": {
             "defaults": attachment_defaults,

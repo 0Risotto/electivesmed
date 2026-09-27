@@ -34,3 +34,11 @@ def test_static_assets_are_served(client):
         response = client.get(path)
         assert response.status_code == 200, path
         assert response.content, path
+
+
+def test_shell_exposes_sign_out(client):
+    page = client.get("/").text
+
+    assert 'action="/logout"' in page
+    assert "Sign out" in page
+    assert "i-logout" in page

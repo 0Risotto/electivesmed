@@ -31,8 +31,12 @@ def create_app(container=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.container = container if container is not None else provide_container()
+        settings = app.state.container.settings
         app.state.runner = BackgroundRunner()
-        app.state.login_throttle = LoginThrottle()
+        app.state.login_throttle = LoginThrottle(
+            limit=settings.web.login_attempts,
+            window=settings.web.lockout_seconds,
+        )
         try:
             yield
         finally:

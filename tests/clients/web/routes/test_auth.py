@@ -71,6 +71,7 @@ def test_login_flow(container):
     with TestClient(create_app(container=container)) as client:
         page = client.get("/login")
         assert "Sign in" in page.text
+        assert "Create account" not in page.text  # remote clients cannot self-register
 
         wrong = client.post(
             "/login",
@@ -171,3 +172,72 @@ def test_setup_post_redirects_when_users_exist(container):
 
         assert "Sign in" in response.text
         assert container.dao.count_users() == 1
+
+
+def test_login_reports_missing_pepper_key(client, container, tmp_path, monkeypatch):
+    monkeypatch.setenv("EL_PEPPER_PATH", str(tmp_path / "missing-pepper.key"))
+
+    response = client.post(
+        "/login",
+        data={"username": TEST_USER, "password": TEST_PASSWORD},
+        follow_redirects=True,
+    )
+
+    assert "pepper key is missing" in response.text
+    assert not (tmp_path / "missing-pepper.key").exists()
+
+
+def test_lockout_limits_come_from_settings(container):
+    _create_user(container)
+    container.settings.web.login_attempts = 1
+    container.settings.web.lockout_seconds = 60
+
+    with TestClient(create_app(container=container)) as client:
+        client.post(
+            "/login",
+            data={"username": TEST_USER, "password": "wrong-password-1"},
+            follow_redirects=True,
+        )
+        locked = client.post(
+            "/login",
+            data={"username": TEST_USER, "password": TEST_PASSWORD},
+            follow_redirects=True,
+        )
+
+        assert "too many attempts" in locked.text
+
+
+def test_local_failure_messages_are_helpful():
+    from electivesmed.clients.web.routes.auth import _failure_message, _is_local
+
+    assert _is_local("127.0.0.1") and _is_local("::1") and _is_local("localhost")
+    assert not _is_local("10.0.0.5") and not _is_local(None)
+    assert "no account named" in _failure_message("ghost", False, True)
+    assert "incorrect password" in _failure_message("ghost", True, True)
+    assert _failure_message("ghost", True, False) == "invalid username or password"
+
+
+def test_local_user_can_create_additional_account(container, monkeypatch):
+    _create_user(container)
+    import electivesmed.clients.web.routes.auth as auth_module
+
+    monkeypatch.setattr(auth_module, "_is_local", lambda host: True)
+
+    with TestClient(create_app(container=container)) as client:
+        page = client.get("/login")
+        assert "Create account" in page.text
+
+        created = client.post(
+            "/setup",
+            data={"username": "second", "password": TEST_PASSWORD, "confirm": TEST_PASSWORD},
+        )
+        assert created.status_code == 200
+        assert "Dashboard" in created.text
+        assert container.dao.find_user("second") is not None
+
+        duplicate = client.post(
+            "/setup",
+            data={"username": "second", "password": TEST_PASSWORD, "confirm": TEST_PASSWORD},
+            follow_redirects=True,
+        )
+        assert "already exists" in duplicate.text

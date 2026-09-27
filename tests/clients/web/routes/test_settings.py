@@ -103,6 +103,8 @@ def test_save_config_updates_yaml_and_container(client, container):
             "eu_policy": "warn",
             "us_policy": "block",
             "retention_days": "365",
+            "login_attempts": "7",
+            "lockout_seconds": "30",
             "max_files": "4",
             "max_file_mb": "5",
             "max_total_mb": "9",
@@ -128,6 +130,8 @@ def test_save_config_updates_yaml_and_container(client, container):
     assert container.settings.sending.window_enabled is False
     assert container.settings.compliance.eu_policy == "warn"
     assert container.settings.attachments.max_files == 4
+    assert container.settings.web.login_attempts == 7
+    assert container.settings.web.lockout_seconds == 30
     assert container.profile.specialties == ["Cardiology", "Emergency Medicine"]
     assert container.profile.goal == "Find electives"
 

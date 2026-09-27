@@ -240,6 +240,10 @@ def my_tool(arg: str) -> dict:
   real defaults.
 - `data/pepper.key` and `data/session.key` are auto-created with 0600. Never log their
   contents, never commit them (gitignored).
+- **Never delete or rotate `data/pepper.key` while accounts exist.** Every stored password
+  hash is peppered with it, so a changed pepper makes all logins fail forever (by design).
+  The login route now refuses to auto-create a pepper when users exist and tells the user to
+  restore the key or run `el user set-password`. Check state with `el doctor`.
 - Secrets are only written through `components/config_writer.py` (`write_env_values`,
   `write_yaml_values`) — atomic writes, 0600 for `.env`, `.bak` for YAML.
 - The web UI must never render a secret back to the browser; only `Set ••••` / `Not set`.

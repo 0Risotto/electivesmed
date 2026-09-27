@@ -596,6 +596,12 @@ class SqliteDao:
             raise StoreError("failed to create user")
         return int(row["id"])
 
+    def list_users(self, limit: int = 50) -> list[User]:
+        rows = self._conn.execute(
+            "SELECT * FROM users ORDER BY username LIMIT ?", (limit,)
+        ).fetchall()
+        return [mappers.user_from_row(row) for row in rows]
+
     def find_user(self, username: str) -> User | None:
         row = self._conn.execute(
             "SELECT * FROM users WHERE username = ?", (username.strip(),)

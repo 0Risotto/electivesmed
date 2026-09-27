@@ -562,3 +562,10 @@ def test_store_error_paths_for_users_and_attachments(dao, monkeypatch, cv_pdf):
         dao.create_user("broken", "hash")
     with pytest.raises(StoreError):
         dao.save_attachment(_attachment(cv_pdf))
+
+
+def test_list_users(dao):
+    dao.create_user("zeta", "hash-z")
+    dao.create_user("alpha", "hash-a")
+
+    assert [user.username for user in dao.list_users()] == ["alpha", "zeta"]

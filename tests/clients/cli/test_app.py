@@ -543,3 +543,28 @@ def test_documents_add_rejects_invalid_file(runner, tmp_path, monkeypatch):
 
     assert result.exit_code == 1
     assert "unsupported" in result.output
+
+
+def test_doctor_reports_local_state(runner, tmp_path, monkeypatch):
+    monkeypatch.setenv("EL_DB_PATH", str(tmp_path / "doctor.db"))
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert '"users"' in result.output
+    assert '"pepper_key"' in result.output
+    assert '"db_path"' in result.output
+
+
+def test_user_list_cli(runner, tmp_path, monkeypatch):
+    db_path = tmp_path / "users.db"
+    monkeypatch.setenv("EL_DB_PATH", str(db_path))
+    runner.invoke(
+        app,
+        ["user", "set-password", "--username", "hello", "--password", "correct-horse-battery"],
+    )
+
+    result = runner.invoke(app, ["user", "list"])
+
+    assert result.exit_code == 0
+    assert "hello" in result.output

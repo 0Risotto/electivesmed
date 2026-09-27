@@ -128,6 +128,10 @@
       <label class="chip"><input type="checkbox" name="include_opt_out" value="true" {% if settings.sending.include_opt_out %}checked{% endif %}> Include opt-out line</label>
       <label class="chip"><input type="checkbox" name="window_enabled" value="true" {% if settings.sending.window_enabled %}checked{% endif %}> Enforce send window</label>
     </div>
+    <div class="grid grid-3" style="margin-top: 8px;">
+      <label class="field"><input type="number" name="login_attempts" value="{{ settings.web.login_attempts }}" min="1"><span>Login attempts before lockout</span></label>
+      <label class="field"><input type="number" name="lockout_seconds" value="{{ settings.web.lockout_seconds }}" min="0"><span>Lockout seconds (restart clears)</span></label>
+    </div>
   </section>
 
   <section class="card">

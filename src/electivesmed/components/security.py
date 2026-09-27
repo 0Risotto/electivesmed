@@ -27,8 +27,8 @@ SESSION_KEY_BYTES = 32
 
 MIN_PASSWORD_LENGTH = 12
 SESSION_TTL_SECONDS = 12 * 60 * 60
-LOCKOUT_AFTER = 5
-LOCKOUT_SECONDS = 15 * 60
+LOCKOUT_AFTER = 10
+LOCKOUT_SECONDS = 2 * 60
 
 COMMON_PASSWORDS = frozenset(
     {
@@ -139,6 +139,10 @@ def _load_or_create_key(path: Path, length: int) -> bytes:
 
 def load_pepper(path: Path | None = None) -> bytes:
     return _load_or_create_key(resolve_pepper_path(path), PEPPER_BYTES)
+
+
+def pepper_exists(path: Path | None = None) -> bool:
+    return resolve_pepper_path(path).exists()
 
 
 def load_session_key(path: Path | None = None) -> bytes:

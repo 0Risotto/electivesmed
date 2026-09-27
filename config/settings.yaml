@@ -45,7 +45,9 @@ attachments:
   max_total_mb: 20
 
 web:
-  require_login: true   # first run creates the local account at /setup
+  require_login: true    # first run creates the local account at /setup
+  login_attempts: 10     # failed logins before a temporary lockout
+  lockout_seconds: 120   # lockout duration; restarting `el web` clears it immediately
 
 sources:
   user_agent: "electivesmed/0.1 (local research tool; contact: set-sender-email)"

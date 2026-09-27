@@ -13,6 +13,7 @@ from ...components import security
 from ...converters.draft import draft_to_preview
 from ...converters.invocation import invocation_to_view
 from ...converters.summary import summary_to_view
+from ...di.config_loader import profile_path, settings_path
 from ...di.providers import provide_container
 from ...errors import AttachmentError, SecurityError
 from ...models.entities import Campaign
@@ -350,6 +351,29 @@ def web(
     uvicorn.run(create_app(), host=host, port=port)
 
 
+@app.command()
+def doctor() -> None:
+    """Diagnose local setup: database, keys, config paths, and providers."""
+    with provide_container() as container:
+        pepper = security.resolve_pepper_path()
+        session = security.resolve_session_key_path()
+        views.print_json(
+            {
+                "db_path": str(getattr(container.dao, "db_path", "")),
+                "users": container.dao.count_users(),
+                "usernames": [user.username for user in container.dao.list_users()],
+                "pepper_key": {"path": str(pepper), "present": pepper.exists()},
+                "session_key": {"path": str(session), "present": session.exists()},
+                "settings_path": str(settings_path()),
+                "profile_path": str(profile_path()),
+                "deepseek_key_set": container.llm.available,
+                "smtp_configured": bool(container.mail.host),
+                "login_required": container.settings.web.require_login,
+                "sources": [entry.name for entry in configured_entries(container.settings)],
+            }
+        )
+
+
 @user_app.command("set-password")
 def user_set_password(
     username: str = typer.Option("ellectives", "--username", "-u"),
@@ -377,6 +401,18 @@ def user_set_password(
             container.dao.update_user_password(username, password_hash)
             action = "updated"
         views.console.print(f"[green]user {username!r} {action}[/]")
+
+
+@user_app.command("list")
+def user_list() -> None:
+    """List local accounts."""
+    with provide_container() as container:
+        views.print_json(
+            [
+                {"username": user.username, "updated_at": user.updated_at.isoformat()}
+                for user in container.dao.list_users()
+            ]
+        )
 
 
 @documents_app.command("add")
