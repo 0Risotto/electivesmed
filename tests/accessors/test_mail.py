@@ -111,3 +111,60 @@ def test_send_failure_returns_failed_receipt(monkeypatch):
 
 def test_close_is_noop():
     assert SmtpAccessor(host="smtp.test", port=587).close() is None
+
+
+def test_build_message_includes_validated_attachment():
+    from electivesmed.models.entities import MailAttachment
+
+    accessor = SmtpAccessor(host="smtp.test", port=587)
+    payload = _payload(attachments=[MailAttachment(filename="cv.pdf", content_type="application/pdf", data=b"%PDF-1.4 fake")])
+    message = accessor.build_message(payload)
+
+    attachments = [part for part in message.walk() if part.get_filename()]
+    assert attachments and attachments[0].get_filename() == "cv.pdf"
+
+
+def test_send_rejects_oversized_attachments(monkeypatch):
+    import electivesmed.accessors.mail as mail_module
+    from electivesmed.models.entities import MailAttachment
+
+    monkeypatch.setattr(mail_module, "SMTP_MAX_MESSAGE_BYTES", 10)
+    accessor = SmtpAccessor(host="smtp.test", port=587)
+    payload = _payload(attachments=[MailAttachment(filename="cv.pdf", content_type="application/pdf", data=b"x" * 50)])
+
+    receipt = accessor.send(payload, dry_run=True)
+
+    assert not receipt.accepted
+    assert receipt.status is SendStatus.FAILED
+    assert "message limit" in receipt.error
+
+
+def test_test_connection_success(monkeypatch):
+    monkeypatch.setattr(smtplib, "SMTP", _FakeSmtp)
+    accessor = SmtpAccessor(host="smtp.test", port=587, user="u", password="p")
+
+    ok, message = accessor.test_connection()
+
+    assert ok
+    assert "connected to smtp.test:587" in message
+
+
+def test_test_connection_without_host():
+    ok, message = SmtpAccessor(host="", port=587).test_connection()
+
+    assert not ok
+    assert "SMTP_HOST" in message
+
+
+def test_test_connection_failure(monkeypatch):
+    class Broken(_FakeSmtp):
+        def login(self, user, password):
+            raise RuntimeError("auth failed")
+
+    monkeypatch.setattr(smtplib, "SMTP", Broken)
+    accessor = SmtpAccessor(host="smtp.test", port=587, user="u", password="p")
+
+    ok, message = accessor.test_connection()
+
+    assert not ok
+    assert "auth failed" in message

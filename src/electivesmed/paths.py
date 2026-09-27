@@ -1,5 +1,6 @@
 """Resolved filesystem locations (runtime values, not constants)."""
 
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -9,4 +10,8 @@ DEFAULT_PROFILE_PATH = REPO_ROOT / "config" / "profile.yaml"
 DEFAULT_SETTINGS_PATH = REPO_ROOT / "config" / "settings.yaml"
 CACHE_DIR = REPO_ROOT / "data" / "cache"
 EXPORT_DIR = REPO_ROOT / "data" / "exports"
-ENV_PATH = REPO_ROOT / ".env"
+ENV_PATH = Path(os.environ.get("EL_ENV_PATH", str(REPO_ROOT / ".env")))
+PEPPER_PATH = Path(os.environ.get("EL_PEPPER_PATH", str(REPO_ROOT / "data" / "pepper.key")))
+SESSION_KEY_PATH = Path(
+    os.environ.get("EL_SESSION_KEY_PATH", str(REPO_ROOT / "data" / "session.key"))
+)

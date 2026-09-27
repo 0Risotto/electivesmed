@@ -64,3 +64,13 @@ def test_source_entry_defaults():
     assert entry.enabled is True
     assert entry.parser == ""
     assert entry.country == ""
+
+
+def test_attachments_and_web_defaults():
+    settings = Settings()
+
+    assert settings.attachments.defaults == []
+    assert settings.attachments.max_files == 5
+    assert settings.attachments.max_file_mb == 10
+    assert settings.attachments.max_total_mb == 20
+    assert settings.web.require_login is True

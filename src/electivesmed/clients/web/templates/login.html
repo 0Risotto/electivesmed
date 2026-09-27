@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Sign in · electivesmed{% endblock %}
+{% block page_title %}Sign in{% endblock %}
+{% block content %}
+<div class="card card-elevated" style="max-width: 420px; margin: 24px auto; width: 100%;">
+  <div class="row" style="margin-bottom: 12px;">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-mail"></use></svg>
+    <h2 class="card-title" style="margin: 0;">electivesmed</h2>
+  </div>
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field">
+      <input type="text" name="username" placeholder=" " autocomplete="username" required autofocus>
+      <span>Username</span>
+    </label>
+    <label class="field">
+      <input type="password" name="password" placeholder=" " autocomplete="current-password" required>
+      <span>Password</span>
+    </label>
+    <button class="btn btn-filled" type="submit" style="width: 100%;">Sign in</button>
+  </form>
+</div>
+{% endblock %}

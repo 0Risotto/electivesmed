@@ -1,0 +1,17 @@
+<div id="lint" class="stack" style="gap: 6px;">
+  <div class="chips">
+    <span class="chip chip-meta">{{ words }} words</span>
+    {% if violations %}
+    <span class="chip" style="border-color: var(--md-sys-color-error); color: var(--md-sys-color-error);">
+      {{ violations|length }} style issue{{ "s" if violations|length != 1 else "" }}
+    </span>
+    {% else %}
+    <span class="ok type-label">style ok</span>
+    {% endif %}
+  </div>
+  {% if violations %}
+  <ul class="violations">
+    {% for violation in violations %}<li>{{ violation }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>

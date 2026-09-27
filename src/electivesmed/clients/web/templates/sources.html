@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Sources · electivesmed{% endblock %}
+{% block page_title %}Sources{% endblock %}
+{% block content %}
+
+<section class="card">
+  <p class="muted" style="margin: 0;">
+    Configured in <code>config/settings.yaml</code> under <code>sources.entries</code>.
+    Add CSV/JSON files, local paths, or API endpoints there, then ingest them here.
+  </p>
+</section>
+
+{% if entries %}
+<div class="grid grid-2">
+  {% for entry in entries %}
+  <section class="card">
+    <div class="spread">
+      <div>
+        <h2 class="card-title" style="margin-bottom: 2px;">{{ entry.name }}</h2>
+        <p class="muted type-body-s" style="margin: 0;">{{ entry.description or entry.url or entry.path }}</p>
+      </div>
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-source"></use></svg>
+    </div>
+    <div class="chips" style="margin-top: 12px;">
+      <span class="chip chip-meta">{{ entry.type }}</span>
+      <span class="chip chip-meta">{{ entry.parser or entry.type }}</span>
+      <span class="chip chip-meta">{{ entry.country or "worldwide" }}</span>
+      <span class="chip chip-meta">{{ "enabled" if entry.enabled else "disabled" }}</span>
+    </div>
+    <form class="filter-bar" style="margin-top: 12px;" method="post" action="/sources/ingest">
+      <input type="hidden" name="name" value="{{ entry.name }}">
+      <label class="field" style="flex: 0 1 140px;">
+        <input type="number" name="limit" value="50" min="1" max="500">
+        <span>Limit</span>
+      </label>
+      <button class="btn btn-filled btn-sm" type="submit">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-download"></use></svg>
+        Ingest
+      </button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-source"></use></svg>
+    <p>No sources configured</p>
+    <span class="type-body-s">Add entries to <code>sources.entries</code> in config/settings.yaml.</span>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,44 +1,40 @@
 """Typer CLI: the local interface to the whole pipeline."""
 
-import csv
-import io
+import getpass
 from pathlib import Path
 
 import typer
 from rich.prompt import Confirm, Prompt
 
 from ...actions.suppression import suppress as suppress_action
+from ...agent.invoker import manual_invocation
 from ...builders.prompts import default_scout_prompt, generate_prompt
-from ...context import reset_invocation, set_invocation
-from ...converters.contact import contact_from_input
+from ...components import security
 from ...converters.draft import draft_to_preview
 from ...converters.invocation import invocation_to_view
 from ...converters.summary import summary_to_view
 from ...di.providers import provide_container
-from ...models.entities import Campaign, Hospital
-from ...models.enums import AgentName, DraftStatus, InvocationStatus, SourceType
-from ...models.invocation import Invocation, InvocationContext
-from ...models.views import ContactInput
+from ...errors import AttachmentError, SecurityError
+from ...models.entities import Campaign
+from ...models.enums import AgentName, DraftStatus
+from ...services.attachments import add_attachment
+from ...services.importing import import_contacts_csv
 from ...services.ingestion import builtin_sources, configured_entries, fetch_source
 from ...services.scoring import score_contacts
 from ...services.sending import send_batch
-from ...utils.ids import new_invocation_id
 from . import views
 from .editor import edit_draft
 
 app = typer.Typer(
-    name="ho",
+    name="el",
     help="Local-first hospital scouting and personalized outreach. No AWS, no cloud.",
     no_args_is_help=True,
     add_completion=False,
 )
-
-
-def _cell(value: object) -> str:
-    """Normalize a CSV cell; extra columns arrive as lists from DictReader."""
-    if isinstance(value, list):
-        value = value[0] if value else ""
-    return str(value or "").strip()
+user_app = typer.Typer(help="Local account management (scrypt + pepper).")
+documents_app = typer.Typer(help="Attachment library: CVs, certificates, brochures.")
+app.add_typer(user_app, name="user")
+app.add_typer(documents_app, name="documents")
 
 
 @app.command("init-db")
@@ -109,53 +105,14 @@ def import_csv(
     """
     with provide_container() as container:
         raw = path.read_text(encoding="utf-8-sig")
-        reader = csv.DictReader(io.StringIO(raw))
-        hospital_ids: dict[str, int] = {}
-        contacts = []
-        for row in reader:
-            cleaned = {
-                (key or "").strip().lower(): _cell(value) for key, value in row.items()
-            }
-            if not (cleaned.get("name") or cleaned.get("email")):
-                continue
-            hospital_name = (
-                cleaned.get("hospital_name") or cleaned.get("hospital") or hospital
-            )
-            row_country = cleaned.get("country") or country
-            hospital_id = None
-            if hospital_name:
-                key = hospital_name.lower()
-                if key not in hospital_ids:
-                    hospital_ids[key] = container.dao.upsert_hospital(
-                        Hospital(
-                            name=hospital_name,
-                            city=cleaned.get("city") or None,
-                            state=cleaned.get("state") or None,
-                            country=row_country,
-                            website=cleaned.get("website") or None,
-                            source_type=SourceType.CSV,
-                            source_url=source_url or str(path),
-                        )
-                    )
-                hospital_id = hospital_ids[key]
-            contacts.append(
-                contact_from_input(
-                    ContactInput(
-                        name=cleaned.get("name") or None,
-                        title=cleaned.get("title") or None,
-                        department=cleaned.get("department") or None,
-                        email=cleaned.get("email") or None,
-                        hospital_name=hospital_name or None,
-                        country=row_country or None,
-                        timezone=cleaned.get("timezone") or None,
-                        lawful_basis=cleaned.get("lawful_basis") or None,
-                        source_url=source_url or str(path),
-                    ),
-                    hospital_id,
-                )
-            )
-        ids = container.dao.save_contacts(contacts)
-        views.print_json({"rows_seen": len(contacts), "saved": len(ids), "path": str(path)})
+        result = import_contacts_csv(
+            container,
+            raw,
+            source_url=source_url or str(path),
+            hospital_name=hospital,
+            country=country,
+        )
+        views.print_json({**result, "path": str(path)})
 
 
 @app.command()
@@ -322,26 +279,11 @@ def send(
             if not Confirm.ask(f"Send up to {len(approved)} real emails now?", default=False):
                 raise typer.Exit()
 
-        invocation_id = new_invocation_id()
-        context = InvocationContext(invocation_id=invocation_id, agent_name="cli-send")
-        container.dao.record_invocation(
-            Invocation(
-                id=invocation_id,
-                agent_name="cli-send",
-                status=InvocationStatus.RUNNING,
-                input_json={"draft_ids": approved, "dry_run": effective_dry_run},
-            )
-        )
-        token = set_invocation(context)
-        try:
+        with manual_invocation(container, "cli-send") as run:
             result = send_batch(
                 container, draft_ids, limit, effective_dry_run, force_window
             )
-        finally:
-            reset_invocation(token)
-        container.dao.finish_invocation(
-            invocation_id, InvocationStatus.SUCCEEDED, output=result
-        )
+            run.output.update(result)
         views.print_send_results(result)
 
 
@@ -393,3 +335,84 @@ def purge(
             else container.settings.compliance.retention_days
         )
         views.print_json(container.dao.purge_older_than(days))
+
+
+@app.command()
+def web(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost by default)"),
+    port: int = typer.Option(8000, "--port"),
+) -> None:
+    """Serve the local web UI (FastAPI + Jinja + HTMX)."""
+    import uvicorn
+
+    from ..web.app import create_app
+
+    uvicorn.run(create_app(), host=host, port=port)
+
+
+@user_app.command("set-password")
+def user_set_password(
+    username: str = typer.Option("ellectives", "--username", "-u"),
+    password: str = typer.Option("", "--password", help="Omit to enter it securely"),
+) -> None:
+    """Create or update a local account (scrypt N=2^17 + pepper)."""
+    with provide_container() as container:
+        if not password:
+            password = getpass.getpass("New password: ")
+            confirm = getpass.getpass("Confirm password: ")
+            if password != confirm:
+                views.console.print("[red]passwords do not match[/]")
+                raise typer.Exit(code=1)
+        try:
+            security.validate_password(password, username)
+        except SecurityError as exc:
+            views.console.print(f"[red]{exc}[/]")
+            raise typer.Exit(code=1)
+        password_hash = security.hash_password(password)
+        existing = container.dao.find_user(username)
+        if existing is None:
+            container.dao.create_user(username, password_hash)
+            action = "created"
+        else:
+            container.dao.update_user_password(username, password_hash)
+            action = "updated"
+        views.console.print(f"[green]user {username!r} {action}[/]")
+
+
+@documents_app.command("add")
+def documents_add(
+    path: Path = typer.Argument(..., exists=True, readable=True),
+) -> None:
+    """Add a document (PDF, PNG, JPG, DOC, DOCX) to the attachment library."""
+    with provide_container() as container:
+        try:
+            attachment = add_attachment(container, path.name, path.read_bytes())
+        except AttachmentError as exc:
+            views.console.print(f"[red]{exc}[/]")
+            raise typer.Exit(code=1)
+        views.print_json(
+            {
+                "id": attachment.id,
+                "filename": attachment.filename,
+                "content_type": attachment.content_type,
+                "size": attachment.size,
+                "sha256": attachment.sha256[:16],
+            }
+        )
+
+
+@documents_app.command("list")
+def documents_list() -> None:
+    """List documents in the attachment library."""
+    with provide_container() as container:
+        views.print_json(
+            [
+                {
+                    "id": attachment.id,
+                    "filename": attachment.filename,
+                    "content_type": attachment.content_type,
+                    "size": attachment.size,
+                }
+                for attachment in container.dao.list_attachments(limit=200)
+            ]
+        )

@@ -14,6 +14,7 @@ def contact_to_view(contact: Contact) -> ContactView:
         title=contact.title,
         department=contact.department,
         email=contact.email_value,
+        country=contact.country,
         fit_score=contact.fit_score,
         fit_percent=round(contact.fit_score * 100) if contact.fit_score is not None else None,
         status=str(contact.status),

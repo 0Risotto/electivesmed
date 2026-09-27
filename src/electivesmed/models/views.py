@@ -23,6 +23,7 @@ class ContactView(BaseModel):
     title: str | None
     department: str | None
     email: str | None
+    country: str | None
     fit_score: float | None
     fit_percent: int | None
     status: str

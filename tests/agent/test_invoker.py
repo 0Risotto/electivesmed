@@ -95,3 +95,49 @@ def test_outreach_agent_builder_is_used(container, monkeypatch):
     stored = container.dao.get_invocation(result.invocation_id)
     assert stored.agent_name == AgentName.OUTREACH.value
     assert stored.campaign_id == 42
+
+
+# --------------------------------------------------------- manual invocations
+
+
+def test_manual_invocation_records_success(container, invocation_ctx):
+    from electivesmed.agent.invoker import manual_invocation
+
+    with manual_invocation(container, "test-manual") as run:
+        run.output.update({"sent": 1})
+
+    stored = container.dao.get_invocation(run.invocation_id)
+    assert stored.status is InvocationStatus.SUCCEEDED
+    assert stored.output_json == {"sent": 1}
+
+
+def test_manual_invocation_accepts_explicit_id(container, invocation_ctx):
+    from electivesmed.agent.invoker import manual_invocation
+
+    with manual_invocation(container, "test-manual", invocation_id="inv_explicit") as run:
+        assert run.invocation_id == "inv_explicit"
+
+    assert container.dao.get_invocation("inv_explicit").status is InvocationStatus.SUCCEEDED
+
+
+def test_manual_invocation_records_failure(container, invocation_ctx):
+    import pytest
+
+    from electivesmed.agent.invoker import manual_invocation
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with manual_invocation(container, "test-manual") as run:
+            raise RuntimeError("boom")
+
+    stored = container.dao.get_invocation(run.invocation_id)
+    assert stored.status is InvocationStatus.FAILED
+    assert "boom" in stored.error
+
+
+def test_invoke_accepts_explicit_invocation_id(container):
+    container.invoker._agents[AgentName.SCOUT.value] = _EchoAgent()
+
+    result = container.invoker.invoke(AgentName.SCOUT, "hello", invocation_id="inv_custom")
+
+    assert result.invocation_id == "inv_custom"
+    assert container.dao.get_invocation("inv_custom") is not None

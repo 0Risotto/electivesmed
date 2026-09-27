@@ -2,7 +2,12 @@
 
 from dataclasses import dataclass, field
 
-from ..compliance import DEFAULT_LAWFUL_BASIS, OPT_OUT_SENTENCE, SPAM_WORDS
+from ..compliance import (
+    ALLOWED_ATTACHMENT_CONTENT_TYPES,
+    DEFAULT_LAWFUL_BASIS,
+    OPT_OUT_SENTENCE,
+    SPAM_WORDS,
+)
 from ..constants import regions
 from ..constants.limits import MAX_BODY_WORDS
 from ..models.entities import Contact, Draft
@@ -52,6 +57,37 @@ class PolicyGate:
             return Decision(False, message)
         return Decision(True, "ok", (message,))
 
+    # ------------------------------------------------------------ attachments
+    def check_attachments(self, draft: Draft) -> Decision:
+        """Defense in depth: re-verify attachment count/size/type at send time."""
+        if draft.id is None:
+            return Decision(True, "ok")
+        attachments = self.dao.find_draft_attachments(draft.id)
+        limit = self.settings.attachments.max_files
+        if len(attachments) > limit:
+            return Decision(
+                False, f"{len(attachments)} attachments exceed the {limit} per-email limit"
+            )
+        total_limit = self.settings.attachments.max_total_mb * 1024 * 1024
+        total = sum(item.size for item in attachments)
+        if total > total_limit:
+            return Decision(
+                False,
+                f"attachments total {total // (1024 * 1024)} MB exceed the "
+                f"{self.settings.attachments.max_total_mb} MB limit",
+            )
+        per_file = self.settings.attachments.max_file_mb * 1024 * 1024
+        for item in attachments:
+            if item.content_type not in ALLOWED_ATTACHMENT_CONTENT_TYPES:
+                return Decision(
+                    False, f"attachment {item.filename!r} type {item.content_type} is not allowed"
+                )
+            if item.size > per_file:
+                return Decision(
+                    False, f"attachment {item.filename!r} exceeds the per-file size limit"
+                )
+        return Decision(True, "ok")
+
     # ------------------------------------------------------------------ style
     def check_content(self, subject: str, body: str) -> Decision:
         """Enforce professional style rules on outbound copy."""
@@ -80,6 +116,10 @@ class PolicyGate:
         if not style.allowed:
             return style
 
+        attachments = self.check_attachments(draft)
+        if not attachments.allowed:
+            return attachments
+
         if not dry_run:
             cap = self.settings.limits.daily_send_cap
             if self.dao.sends_today() >= cap:
@@ -89,7 +129,7 @@ class PolicyGate:
             if self.dao.sends_today_for_domain(domain) >= domain_cap:
                 return Decision(False, f"per-domain cap reached for {domain} ({domain_cap}/day)")
 
-        warnings: list[str] = list(jurisdiction.warnings)
+        warnings: list[str] = list(jurisdiction.warnings) + list(attachments.warnings)
         body = draft.body_text
         if OPT_OUT_SENTENCE not in body:
             warnings.append("opt-out sentence missing; it will be appended at send time")

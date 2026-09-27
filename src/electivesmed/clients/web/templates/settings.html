@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Settings · electivesmed{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+
+<section class="card card-elevated">
+  <div class="spread">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 2px;">Account</h2>
+      <p class="muted type-body-s" style="margin: 0;">Signed in as <strong>{{ username }}</strong>. Sessions expire after 12 hours.</p>
+    </div>
+    <form method="post" action="/logout">
+      <button class="btn btn-outlined btn-sm" type="submit">Sign out</button>
+    </form>
+  </div>
+  <form method="post" action="/settings/password" class="grid grid-3" style="margin-top: 12px;">
+    <label class="field">
+      <input type="password" name="current_password" placeholder=" " autocomplete="current-password" required>
+      <span>Current password</span>
+    </label>
+    <label class="field">
+      <input type="password" name="new_password" placeholder=" " autocomplete="new-password" required minlength="12">
+      <span>New password (min 12)</span>
+    </label>
+    <label class="field">
+      <input type="password" name="confirm" placeholder=" " autocomplete="new-password" required minlength="12">
+      <span>Confirm new password</span>
+    </label>
+    <button class="btn btn-filled btn-sm" type="submit">Update password</button>
+  </form>
+  <p class="muted type-body-s" style="margin: 8px 0 0;">
+    Hashing: scrypt N=2^17, r=8, p=1, 64-byte digest, peppered with <code>data/pepper.key</code> (0600).
+  </p>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Secrets &amp; connections</h2>
+  <p class="muted type-body-s">
+    Stored in <code>.env</code> with 0600 permissions; values are never shown again after saving.
+    Leave a secret blank to keep it, or tick Clear to remove it.
+  </p>
+  <form method="post" action="/settings/env" class="grid grid-2">
+    <label class="field">
+      <input type="text" name="smtp_host" value="{{ env_values.smtp_host }}" placeholder=" ">
+      <span>SMTP host</span>
+    </label>
+    <label class="field">
+      <input type="number" name="smtp_port" value="{{ env_values.smtp_port }}" placeholder=" ">
+      <span>SMTP port</span>
+    </label>
+    <label class="field">
+      <input type="text" name="smtp_user" value="{{ env_values.smtp_user }}" placeholder=" ">
+      <span>SMTP user</span>
+    </label>
+    <label class="field">
+      <input type="password" name="smtp_password" placeholder=" " autocomplete="new-password">
+      <span>SMTP app password — {% if secret_state.smtp_password %}Set ••••{% else %}Not set{% endif %}</span>
+    </label>
+    <label class="field">
+      <input type="text" name="smtp_from" value="{{ env_values.smtp_from }}" placeholder=" ">
+      <span>From address</span>
+    </label>
+    <label class="field">
+      <input type="text" name="smtp_reply_to" value="{{ env_values.smtp_reply_to }}" placeholder=" ">
+      <span>Reply-to</span>
+    </label>
+    <label class="field">
+      <input type="text" name="imap_host" value="{{ env_values.imap_host }}" placeholder=" ">
+      <span>IMAP host (optional)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="imap_user" value="{{ env_values.imap_user }}" placeholder=" ">
+      <span>IMAP user</span>
+    </label>
+    <label class="field">
+      <input type="password" name="imap_password" placeholder=" " autocomplete="new-password">
+      <span>IMAP password — {% if secret_state.imap_password %}Set ••••{% else %}Not set{% endif %}</span>
+    </label>
+    <label class="field">
+      <input type="password" name="deepseek_api_key" placeholder=" " autocomplete="off">
+      <span>DeepSeek API key — {% if secret_state.deepseek_api_key %}Set ••••{% else %}Not set{% endif %}</span>
+    </label>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" name="clear_smtp_password" value="true"> Clear SMTP password</label>
+      <label class="chip"><input type="checkbox" name="clear_imap_password" value="true"> Clear IMAP password</label>
+      <label class="chip"><input type="checkbox" name="clear_deepseek_api_key" value="true"> Clear DeepSeek key</label>
+    </div>
+    <div class="row">
+      <button class="btn btn-filled btn-sm" type="submit">Save environment</button>
+    </div>
+  </form>
+  <div class="row" style="margin-top: 8px;">
+    <form method="post" action="/settings/test-smtp">
+      <button class="btn btn-tonal btn-sm" type="submit">Test SMTP (sends nothing)</button>
+    </form>
+    <form method="post" action="/settings/test-llm">
+      <button class="btn btn-tonal btn-sm" type="submit">Test DeepSeek</button>
+    </form>
+  </div>
+</section>
+
+<form method="post" action="/settings/config" class="stack">
+  <section class="card">
+    <h2 class="card-title">Sender</h2>
+    <div class="grid grid-2">
+      <label class="field"><input type="text" name="sender_name" value="{{ settings.sender.name }}" placeholder=" "><span>Name</span></label>
+      <label class="field"><input type="text" name="sender_role" value="{{ settings.sender.role }}" placeholder=" "><span>Role</span></label>
+      <label class="field"><input type="text" name="sender_email" value="{{ settings.sender.email }}" placeholder=" "><span>Email</span></label>
+      <label class="field"><input type="text" name="sender_reply_to" value="{{ settings.sender.reply_to }}" placeholder=" "><span>Reply-to</span></label>
+      <label class="field"><input type="text" name="sender_organization" value="{{ settings.sender.organization }}" placeholder=" "><span>Organization</span></label>
+      <label class="field"><input type="text" name="sender_postal_address" value="{{ settings.sender.postal_address }}" placeholder=" "><span>Postal address (required for US recipients)</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Limits &amp; send window</h2>
+    <div class="grid grid-3">
+      <label class="field"><input type="number" name="daily_send_cap" value="{{ settings.limits.daily_send_cap }}" min="1"><span>Daily send cap</span></label>
+      <label class="field"><input type="number" name="per_domain_cap" value="{{ settings.limits.per_domain_cap }}" min="1"><span>Per-domain cap</span></label>
+      <label class="field"><input type="number" name="min_delay_seconds" value="{{ settings.limits.min_delay_seconds }}" min="0"><span>Min delay (s)</span></label>
+      <label class="field"><input type="number" name="max_delay_seconds" value="{{ settings.limits.max_delay_seconds }}" min="0"><span>Max delay (s)</span></label>
+      <label class="field"><input type="text" name="window_days" value="{{ settings.sending.window_days|join(',') }}" placeholder=" "><span>Window days (Mon=0)</span></label>
+      <label class="field"><input type="text" name="window_start" value="{{ settings.sending.window_start }}" placeholder=" "><span>Window start</span></label>
+      <label class="field"><input type="text" name="window_end" value="{{ settings.sending.window_end }}" placeholder=" "><span>Window end</span></label>
+    </div>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" name="dry_run_default" value="true" {% if settings.sending.dry_run_default %}checked{% endif %}> Dry-run by default</label>
+      <label class="chip"><input type="checkbox" name="include_opt_out" value="true" {% if settings.sending.include_opt_out %}checked{% endif %}> Include opt-out line</label>
+      <label class="chip"><input type="checkbox" name="window_enabled" value="true" {% if settings.sending.window_enabled %}checked{% endif %}> Enforce send window</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Compliance</h2>
+    <div class="grid grid-3">
+      <label class="field field-static">
+        <select name="eu_policy">
+          {% for option in ["block", "warn"] %}<option value="{{ option }}" {% if settings.compliance.eu_policy == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+        <span>EU/EEA/UK without lawful basis</span>
+      </label>
+      <label class="field field-static">
+        <select name="us_policy">
+          {% for option in ["block", "warn"] %}<option value="{{ option }}" {% if settings.compliance.us_policy == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+        <span>US without postal address</span>
+      </label>
+      <label class="field"><input type="number" name="retention_days" value="{{ settings.compliance.retention_days }}" min="0"><span>Retention (days)</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Attachments</h2>
+    <p class="muted type-body-s">Default documents are attached to every new draft; toggle them per draft in the editor.</p>
+    {% if documents %}
+    <div class="chips">
+      {% for document in documents %}
+      <label class="chip {% if document.filename in settings.attachments.defaults %}chip-selected{% endif %}">
+        <input type="checkbox" name="attachment_defaults" value="{{ document.filename }}"
+               {% if document.filename in settings.attachments.defaults %}checked{% endif %}>
+        {{ document.filename }}
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted type-body-s" style="margin: 0;">No documents uploaded yet. <a href="/documents">Add your CV or certificates</a>.</p>
+    {% endif %}
+    <div class="grid grid-3" style="margin-top: 12px;">
+      <label class="field"><input type="number" name="max_files" value="{{ settings.attachments.max_files }}" min="1"><span>Max files per email</span></label>
+      <label class="field"><input type="number" name="max_file_mb" value="{{ settings.attachments.max_file_mb }}" min="1"><span>Max file size (MB)</span></label>
+      <label class="field"><input type="number" name="max_total_mb" value="{{ settings.attachments.max_total_mb }}" min="1"><span>Max total size (MB)</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Profile</h2>
+    <div class="grid grid-2">
+      <label class="field"><input type="text" name="goal" value="{{ profile.goal }}" placeholder=" "><span>Goal</span></label>
+      <label class="field"><input type="text" name="ask" value="{{ profile.ask }}" placeholder=" "><span>Ask (one clear question)</span></label>
+      <label class="field"><input type="text" name="tone" value="{{ profile.tone }}" placeholder=" "><span>Tone</span></label>
+      <label class="field"><input type="text" name="language" value="{{ profile.language }}" placeholder=" "><span>Language</span></label>
+    </div>
+    <div class="grid grid-2">
+      <label class="field"><textarea name="specialties">{{ profile.specialties|join('\n') }}</textarea><span>Specialties (one per line)</span></label>
+      <label class="field"><textarea name="target_roles">{{ profile.target_roles|join('\n') }}</textarea><span>Target roles (one per line)</span></label>
+      <label class="field"><textarea name="locations">{{ profile.locations|join('\n') }}</textarea><span>Locations (one per line)</span></label>
+      <label class="field"><textarea name="hospital_types">{{ profile.hospital_types|join('\n') }}</textarea><span>Hospital types (one per line)</span></label>
+      <label class="field"><textarea name="must_haves">{{ profile.must_haves|join('\n') }}</textarea><span>Must-haves (one per line)</span></label>
+      <label class="field"><textarea name="avoid">{{ profile.avoid|join('\n') }}</textarea><span>Avoid (one per line)</span></label>
+    </div>
+  </section>
+
+  <div class="action-bar">
+    <button class="btn btn-filled" type="submit">Save configuration</button>
+    <span class="muted type-body-s">Writes config/settings.yaml and config/profile.yaml (one-deep .bak backup).</span>
+  </div>
+</form>
+{% endblock %}

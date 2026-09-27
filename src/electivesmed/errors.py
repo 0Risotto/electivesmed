@@ -25,6 +25,18 @@ class StoreError(OutreachError):
     """Persistence failure."""
 
 
+class SecurityError(OutreachError):
+    """Credential, session, or hashing failure."""
+
+
+class AttachmentError(OutreachError):
+    """Attachment validation or storage failure."""
+
+
+class ConfigWriteError(OutreachError):
+    """Failed to persist configuration."""
+
+
 class PolicyDenied(OutreachError):
     """An action was blocked by the policy gate."""
 

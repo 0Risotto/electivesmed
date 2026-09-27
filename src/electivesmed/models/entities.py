@@ -91,6 +91,30 @@ class Suppression(BaseModel):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class User(BaseModel):
+    id: int | None = None
+    username: str
+    password_hash: str
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class Attachment(BaseModel):
+    id: int | None = None
+    filename: str
+    content_type: str
+    size: int
+    sha256: str
+    data: bytes | None = None
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class MailAttachment(BaseModel):
+    filename: str
+    content_type: str
+    data: bytes
+
+
 class MailPayload(BaseModel):
     to: str
     from_email: str
@@ -99,6 +123,7 @@ class MailPayload(BaseModel):
     body_text: str
     body_html: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
+    attachments: list[MailAttachment] = Field(default_factory=list)
 
 
 class SendReceipt(BaseModel):

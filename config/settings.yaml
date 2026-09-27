@@ -1,4 +1,4 @@
-# App settings. Secrets never go here; use .env.
+# App settings. Secrets never go here; use .env (editable from the web UI at /settings).
 sender:
   name: "Your Name"
   role: "Your Role"
@@ -37,6 +37,15 @@ smtp:
   port: 587
   user: ""             # SMTP_USER in .env overrides
   from_email: ""
+
+attachments:
+  defaults: []         # document names auto-attached to every new draft
+  max_files: 5
+  max_file_mb: 10
+  max_total_mb: 20
+
+web:
+  require_login: true   # first run creates the local account at /setup
 
 sources:
   user_agent: "electivesmed/0.1 (local research tool; contact: set-sender-email)"

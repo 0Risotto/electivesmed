@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Dry run · electivesmed{% endblock %}
+{% block page_title %}Dry-run results{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="chips">
+    <span class="chip chip-meta tnum">attempted {{ result.attempted }}</span>
+    <span class="chip chip-meta tnum">sent {{ result.sent }}</span>
+    <span class="chip chip-meta tnum">dry-run {{ result.dry_run }}</span>
+    <span class="chip chip-meta tnum">denied {{ result.denied }}</span>
+    <span class="chip chip-meta tnum">failed {{ result.failed }}</span>
+    <span class="chip chip-meta tnum">deferred {{ result.deferred }}</span>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Per-draft outcome</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Draft</th><th>To</th><th>Status</th><th>Attachments</th><th>Detail</th></tr></thead>
+      <tbody>
+        {% for row in result.results %}
+        <tr>
+          <td>{{ row.draft_id }}</td>
+          <td>{{ row.to or "-" }}</td>
+          <td><span class="badge badge-{{ row.status }}">{{ row.status }}</span></td>
+          <td class="muted type-body-s">{{ (row.attachments or [])|join(", ") or "-" }}</td>
+          <td class="muted type-body-s">{{ row.reason or row.error or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Rendered emails</h2>
+  <div class="stack">
+    {% for preview in previews %}
+    <div class="preview-card">
+      <div class="preview-header">
+        <strong>{{ preview.subject }}</strong>
+        <span class="muted type-body-s">to {{ preview.to }}{% if preview.attachments %} · attachments: {{ preview.attachments|join(", ") }}{% endif %}</span>
+      </div>
+      <div class="preview-body">{{ preview.body }}</div>
+    </div>
+    {% else %}
+    <p class="muted" style="margin: 0;">No emails to render.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<footer class="row">
+  <a class="btn btn-tonal btn-sm" href="/send">Back to send</a>
+  <a class="btn btn-text btn-sm" href="/drafts">Open drafts</a>
+</footer>
+{% endblock %}

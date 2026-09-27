@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Drafts · electivesmed{% endblock %}
+{% block page_title %}Drafts{% endblock %}
+{% block app_bar_actions %}
+<a class="btn btn-filled btn-sm" href="/campaigns">
+  <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-sparkle"></use></svg>
+  Generate
+</a>
+{% endblock %}
+{% block content %}
+
+<section class="chips">
+  {% for option in ["pending", "approved", "rejected", "sent"] %}
+  <a class="chip {% if status == option %}chip-selected{% endif %}" href="/drafts?status={{ option }}">{{ option }}</a>
+  {% endfor %}
+</section>
+
+<form method="post" action="/drafts/bulk" class="stack">
+  <div class="row">
+    <button class="btn btn-filled btn-sm" type="submit" name="action" value="approve">Approve selected</button>
+    <button class="btn btn-tonal btn-sm" type="submit" name="action" value="reject">Reject selected</button>
+    <button class="btn btn-outlined btn-sm" type="submit" name="action" value="suppress">Suppress selected</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th></th><th>#</th><th>To</th><th>Subject</th><th>Status</th><th>Confidence</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for draft in drafts %}
+        <tr>
+          <td><input type="checkbox" name="draft_ids" value="{{ draft.id }}" aria-label="Select draft {{ draft.id }}"></td>
+          <td>{{ draft.id }}</td>
+          <td>{{ draft.to_email or "-" }}</td>
+          <td>{{ draft.subject }}</td>
+          <td><span class="badge badge-{{ draft.status }}">{{ draft.status }}</span></td>
+          <td class="tnum">{{ "%.2f"|format(draft.confidence) }}</td>
+          <td><a class="btn btn-text btn-sm" href="/drafts/{{ draft.id }}">Personalize</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">
+          <div class="empty">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-drafts"></use></svg>
+            <p>No drafts with this status</p>
+            <span class="type-body-s">Generate drafts from a campaign, then review them here.</span>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+{% endblock %}

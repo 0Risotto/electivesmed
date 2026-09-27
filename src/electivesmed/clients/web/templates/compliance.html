@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Compliance · electivesmed{% endblock %}
+{% block page_title %}Compliance{% endblock %}
+{% block content %}
+
+<section class="grid grid-3">
+  <div class="card kpi"><span class="num tnum">{{ suppressions|length }}</span><span class="label">Suppressed addresses</span></div>
+  <div class="card kpi"><span class="num tnum">{{ summary.contacts }}</span><span class="label">Contacts on file</span></div>
+  <div class="card kpi"><span class="num tnum">{{ summary.sent_total }}</span><span class="label">Emails sent</span></div>
+  <div class="card kpi"><span class="num tnum">{{ retention_days }}d</span><span class="label">Retention window</span></div>
+  <div class="card kpi"><span class="num">{{ eu_policy }}</span><span class="label">EU/EEA/UK policy</span></div>
+  <div class="card kpi"><span class="num">{{ us_policy }}</span><span class="label">US policy</span></div>
+</section>
+
+<section class="card">
+  <div class="spread">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 2px;">Suppression list</h2>
+      <p class="muted type-body-s" style="margin: 0;">Addresses here are blocked from every send, regardless of approval.</p>
+    </div>
+    <button class="btn btn-tonal btn-sm" type="button" data-dialog-open="#suppress-dialog">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-add"></use></svg>
+      Add address
+    </button>
+  </div>
+  {% if suppressions %}
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table>
+      <thead><tr><th>Email</th><th>Reason</th><th>Since</th></tr></thead>
+      <tbody>
+        {% for suppression in suppressions %}
+        <tr>
+          <td>{{ suppression.email }}</td>
+          <td>{{ suppression.reason }}</td>
+          <td class="muted type-body-s">{{ suppression.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-compliance"></use></svg>
+    <p>No suppressions</p>
+    <span class="type-body-s">Opt-outs and manual blocks appear here.</span>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 class="card-title">Retention purge</h2>
+  <p class="muted type-body-s">Deletes sends, drafts, and unreferenced contacts older than the window (defaults to <code>compliance.retention_days</code>).</p>
+  <button class="btn btn-outlined btn-sm" type="button" data-dialog-open="#purge-dialog">
+    <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-delete"></use></svg>
+    Purge old records
+  </button>
+</section>
+
+<dialog class="dialog" id="suppress-dialog" aria-label="Add suppression">
+  <h2>Suppress an address</h2>
+  <form method="post" action="/compliance/suppress">
+    <label class="field">
+      <input type="email" name="email" placeholder=" " required>
+      <span>Email address</span>
+    </label>
+    <label class="field">
+      <input type="text" name="reason" value="unsubscribe" placeholder=" ">
+      <span>Reason</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Suppress</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dialog" id="purge-dialog" aria-label="Purge old records">
+  <h2>Purge old records</h2>
+  <p class="muted type-body-s">This permanently deletes historical data. Suppressions are kept.</p>
+  <form method="post" action="/compliance/purge">
+    <label class="field">
+      <input type="number" name="days" value="{{ retention_days }}" min="0">
+      <span>Delete records older than (days)</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-danger" type="submit">Purge</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

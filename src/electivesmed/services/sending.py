@@ -10,6 +10,7 @@ from ..constants import regions
 from ..context import require_invocation
 from ..models.entities import Send
 from ..models.enums import DraftStatus, SendStatus
+from .attachments import mail_attachments
 
 
 def _now() -> datetime:
@@ -67,6 +68,7 @@ def send_one(
             }
 
     settings = container.settings
+    attachments = mail_attachments(container, draft.id or 0)
     payload = build_payload(
         draft,
         contact,
@@ -76,6 +78,7 @@ def send_one(
         postal_address=settings.sender.postal_address,
         sender_name=settings.sender.name,
         organization=settings.sender.organization,
+        attachments=attachments,
     )
     receipt = container.mail.send(payload, dry_run=dry_run)
 
@@ -93,6 +96,9 @@ def send_one(
     if not dry_run:
         if receipt.status == SendStatus.SENT:
             container.dao.set_draft_status(draft.id, DraftStatus.SENT)
+            container.dao.record_sent_attachments(
+                send_id, container.dao.find_draft_attachments(draft.id)
+            )
         elif not receipt.accepted:
             container.dao.set_draft_status(draft.id, DraftStatus.SEND_FAILED)
 
@@ -104,6 +110,7 @@ def send_one(
         "message_id": receipt.message_id,
         "error": receipt.error,
         "dry_run": dry_run,
+        "attachments": [item.filename for item in attachments],
         "warnings": list(decision.warnings),
     }
 

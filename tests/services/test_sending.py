@@ -201,3 +201,18 @@ def test_now_returns_utc_timestamp():
     from electivesmed.services.sending import _now
 
     assert _now().tzinfo is not None
+
+
+def test_send_one_attaches_documents_and_audits(container, approved, invocation_ctx, open_window, cv_pdf):
+    from electivesmed.services.attachments import add_attachment, attach_to_draft
+
+    attachment = add_attachment(container, "cv.pdf", cv_pdf)
+    attach_to_draft(container, approved["draft_id"], attachment.id)
+    container.mail = FakeMail(status=SendStatus.SENT)
+
+    result = send_one(container, approved["draft_id"], dry_run=False)
+
+    payload, _ = container.mail.calls[0]
+    assert payload.attachments[0].filename == "cv.pdf"
+    assert result["attachments"] == ["cv.pdf"]
+    assert container.dao.find_sent_attachments(result["send_id"])[0]["filename"] == "cv.pdf"

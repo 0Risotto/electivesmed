@@ -39,10 +39,12 @@ class FakeLlm:
         available: bool = True,
         json_response: dict | None = None,
         text_response: str = "ok",
+        api_key: str = "fake-key",
     ) -> None:
         self._available = available
         self._json = json_response if json_response is not None else {}
         self._text = text_response
+        self.api_key = api_key
         self.calls: list[tuple] = []
 
     @property

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Draft #{{ draft.id }} · electivesmed{% endblock %}
+{% block page_title %}Draft #{{ draft.id }}{% endblock %}
+{% block app_bar_actions %}
+<span class="badge badge-{{ draft.status }}">{{ draft.status }}</span>
+{% endblock %}
+{% block content %}
+
+<div class="editor">
+  <input class="pane-radio" type="radio" name="editor-tab" id="tab-contact" checked>
+  <input class="pane-radio" type="radio" name="editor-tab" id="tab-edit">
+  <input class="pane-radio" type="radio" name="editor-tab" id="tab-preview">
+  <div class="pane-tabs" role="tablist" aria-label="Draft panes">
+    <label for="tab-contact" role="tab">Contact</label>
+    <label for="tab-edit" role="tab">Edit</label>
+    <label for="tab-preview" role="tab">Preview</label>
+  </div>
+
+  <div class="panes">
+    <aside class="card pane pane-contact">
+      <h2 class="card-title">Personalization</h2>
+      <dl>
+        <dt>name</dt><dd>{{ contact.name or "— missing —" }}</dd>
+        <dt>title</dt><dd>{{ contact.title or "— missing —" }}</dd>
+        <dt>department</dt><dd>{{ contact.department or "— missing —" }}</dd>
+        <dt>hospital</dt><dd>{{ contact.hospital_name or "— missing —" }}</dd>
+        <dt>email</dt><dd>{{ contact.email_value or "— missing —" }}</dd>
+        <dt>country</dt><dd>{{ contact.country or "unknown" }}</dd>
+        <dt>lawful basis</dt><dd>{{ contact.lawful_basis }}</dd>
+        <dt>fit</dt><dd class="tnum">{% if contact.fit_score is not none %}{{ "%.2f"|format(contact.fit_score) }}{% else %}-{% endif %}</dd>
+      </dl>
+      {% if contact.fit_reasons %}
+      <div class="chips" style="margin-top: 8px;">
+        {% for reason in contact.fit_reasons %}<span class="chip chip-meta">{{ reason }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      {% if jurisdiction %}
+      <div class="chips" style="margin-top: 8px;">
+        {% if jurisdiction.requires_lawful_basis %}<span class="chip chip-meta">lawful basis required</span>{% endif %}
+        {% if jurisdiction.requires_postal_address %}<span class="chip chip-meta">postal address required</span>{% endif %}
+        {% if not jurisdiction.requires_lawful_basis and not jurisdiction.requires_postal_address %}<span class="chip chip-meta">default rules</span>{% endif %}
+      </div>
+      {% endif %}
+      <a class="btn btn-text btn-sm" style="margin-top: 8px;" href="/contacts/{{ contact.id }}">View contact</a>
+
+      <h3 class="type-title-s" style="margin: 16px 0 6px;">Attachments ({{ attachments|length }})</h3>
+      <div class="chips">
+        {% for attachment in attachments %}
+        <form class="chip" method="post" action="/drafts/{{ draft.id }}/detach">
+          <input type="hidden" name="attachment_id" value="{{ attachment.id }}">
+          <span>{{ attachment.filename }}</span>
+          <button class="btn-text" type="submit" aria-label="Remove {{ attachment.filename }}" style="padding: 0 4px;">×</button>
+        </form>
+        {% else %}
+        <span class="muted type-body-s">No attachments. Defaults are applied on generation.</span>
+        {% endfor %}
+      </div>
+      <button class="btn btn-outlined btn-sm" type="button" style="margin-top: 8px;" data-dialog-open="#attach-dialog">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-upload"></use></svg>
+        Attach documents
+      </button>
+    </aside>
+
+    <section class="card pane pane-edit">
+      <form id="draft-form" class="editor-form" method="post" action="/drafts/{{ draft.id }}/save"
+            hx-post="/drafts/{{ draft.id }}/lint"
+            hx-trigger="keyup changed delay:400ms from:input[name='subject'], keyup changed delay:400ms from:textarea[name='body']"
+            hx-target="#lint" hx-swap="outerHTML" hx-include="this">
+        <label class="field">
+          <input type="text" name="subject" value="{{ draft.subject }}" placeholder=" " maxlength="120">
+          <span>Subject</span>
+        </label>
+        <label class="field">
+          <textarea name="body" placeholder=" ">{{ draft.body_text }}</textarea>
+          <span>Body</span>
+        </label>
+        {% include "partials/lint.html" %}
+      </form>
+    </section>
+
+    <section class="card pane pane-preview">
+      <h2 class="card-title">Rendered preview</h2>
+      {% if campaign %}<p class="muted type-body-s" style="margin: 0 0 8px;">campaign: {{ campaign.name }}</p>{% endif %}
+      <p class="muted type-body-s" style="margin: 0 0 8px;">
+        rationale: {{ draft.rationale or "none" }} · confidence <span class="tnum">{{ "%.2f"|format(draft.confidence) }}</span>
+      </p>
+      {% if attachments %}
+      <div class="chips" style="margin-bottom: 8px;">
+        {% for attachment in attachments %}<span class="chip chip-meta">{{ attachment.filename }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="preview-card">
+        <div class="preview-header">
+          <strong>{{ draft.subject }}</strong>
+          <span class="muted type-body-s">to {{ contact.email_value or "no address" }}</span>
+        </div>
+        <div class="preview-body">{{ payload_preview or "no email address for this contact" }}</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="action-bar">
+  <button class="btn btn-filled btn-sm" type="submit" form="draft-form">
+    <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-check"></use></svg>
+    Save
+  </button>
+  <form method="post" action="/drafts/{{ draft.id }}/approve">
+    <button class="btn btn-tonal btn-sm" type="submit">Approve</button>
+  </form>
+  <form method="post" action="/drafts/{{ draft.id }}/reject">
+    <button class="btn btn-text btn-sm" type="submit">Reject</button>
+  </form>
+  <button class="btn btn-outlined btn-sm" type="button" data-dialog-open="#regen-dialog">
+    <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-sparkle"></use></svg>
+    Regenerate
+  </button>
+  <button class="btn btn-text btn-sm row-end" type="button" data-dialog-open="#suppress-dialog">Suppress contact</button>
+</div>
+
+<dialog class="dialog" id="attach-dialog" aria-label="Attach documents">
+  <h2>Attach documents</h2>
+  {% if library %}
+  <form method="post" action="/drafts/{{ draft.id }}/attach">
+    <div class="chips">
+      {% for document in library %}
+      <label class="chip">
+        <input type="checkbox" name="attachment_ids" value="{{ document.id }}"
+               {% if document.id in attachments|map(attribute='id')|list %}checked{% endif %}>
+        {{ document.filename }}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Attach selected</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="muted type-body-s">No documents in the library yet. <a href="/documents">Upload your CV or certificates</a>.</p>
+  <div class="dialog-actions">
+    <button class="btn btn-text" type="button" data-dialog-close>Close</button>
+  </div>
+  {% endif %}
+</dialog>
+
+<dialog class="dialog" id="regen-dialog" aria-label="Regenerate draft">
+  <h2>Regenerate with DeepSeek</h2>
+  <p class="muted type-body-s">Writes a fresh draft for this contact. The current draft stays until you approve the new one.</p>
+  <form hx-post="/drafts/{{ draft.id }}/regenerate" hx-target="#regen" hx-swap="innerHTML">
+    <label class="field">
+      <input type="text" name="instructions" placeholder=" ">
+      <span>Instructions (optional)</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Regenerate</button>
+    </div>
+  </form>
+  <div id="regen" style="margin-top: 12px;"></div>
+</dialog>
+
+<dialog class="dialog" id="suppress-dialog" aria-label="Suppress contact">
+  <h2>Suppress contact</h2>
+  <p class="muted type-body-s">Adds {{ contact.email_value or "this address" }} to the do-not-contact list and rejects this draft. This cannot be undone from the UI.</p>
+  <form method="post" action="/drafts/{{ draft.id }}/suppress">
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-danger" type="submit">Suppress</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

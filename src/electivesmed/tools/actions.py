@@ -4,6 +4,7 @@ from strands import tool
 
 from ..actions.drafts import save_draft as save_draft_action
 from ..actions.suppression import suppress as suppress_action
+from ..services.attachments import attach_by_names, attach_defaults
 from ..services.sending import send_batch as send_batch_activity
 from ..services.sending import send_one as send_one_activity
 
@@ -18,12 +19,15 @@ def build(container) -> list:
         body_html: str = "",
         rationale: str = "",
         confidence: float = 0.0,
+        attachments: str = "",
     ) -> dict:
         """Save a personalized outreach email as a PENDING draft for human review.
 
         The draft is never sent automatically; a human must approve it first.
+        attachments: optional comma-separated document names from the library;
+        defaults from settings are attached when left empty.
         """
-        return save_draft_action(
+        result = save_draft_action(
             container,
             contact_id,
             campaign_name,
@@ -33,6 +37,13 @@ def build(container) -> list:
             rationale,
             confidence,
         )
+        if result.get("status") == "pending_review":
+            names = [name.strip() for name in attachments.split(",") if name.strip()]
+            if names:
+                result["attachments"] = attach_by_names(container, result["draft_id"], names)
+            else:
+                result["attachments"] = attach_defaults(container, result["draft_id"])
+        return result
 
     @tool
     def send_email(draft_id: int, dry_run: bool = True, force_window: bool = False) -> dict:

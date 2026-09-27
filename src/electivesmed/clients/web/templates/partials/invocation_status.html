@@ -1,0 +1,32 @@
+<div class="card card-outlined invocation" role="status" aria-live="polite"
+     {% if invocation.status == 'running' %}
+     hx-get="/invocations/{{ invocation.id }}/status"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML"
+     {% endif %}>
+  <div class="row">
+    <span class="badge badge-{{ invocation.status }}">{{ invocation.agent }} · {{ invocation.status }}</span>
+    <span class="muted type-body-s">{{ invocation.id }}</span>
+    {% if invocation.status == 'running' %}
+    <div class="progress indeterminate row-end" style="min-width: 120px; max-width: 220px; flex: 1;">
+      <div class="progress-bar"></div>
+    </div>
+    {% endif %}
+  </div>
+  {% if invocation.output %}
+    {% if invocation.output.summary %}
+    <p style="margin: 0;">{{ invocation.output.summary }}</p>
+    {% endif %}
+    {% if invocation.output.attempted is defined %}
+    <div class="chips">
+      <span class="chip chip-meta">attempted {{ invocation.output.attempted }}</span>
+      <span class="chip chip-meta">sent {{ invocation.output.sent }}</span>
+      <span class="chip chip-meta">dry-run {{ invocation.output.dry_run }}</span>
+      <span class="chip chip-meta">denied {{ invocation.output.denied }}</span>
+      <span class="chip chip-meta">failed {{ invocation.output.failed }}</span>
+      <span class="chip chip-meta">deferred {{ invocation.output.deferred }}</span>
+    </div>
+    {% endif %}
+  {% endif %}
+  {% if invocation.error %}<pre class="error code">{{ invocation.error }}</pre>{% endif %}
+</div>

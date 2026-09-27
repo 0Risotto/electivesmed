@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Campaigns · electivesmed{% endblock %}
+{% block page_title %}Campaigns{% endblock %}
+{% block app_bar_actions %}
+<button class="btn btn-filled btn-sm" type="button" data-dialog-open="#campaign-dialog">
+  <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-add"></use></svg>
+  New campaign
+</button>
+{% endblock %}
+{% block content %}
+
+{% if campaigns %}
+<div class="grid grid-2">
+  {% for campaign in campaigns %}
+  <section class="card">
+    <div class="spread">
+      <div>
+        <h2 class="card-title" style="margin-bottom: 2px;">{{ campaign.name }}</h2>
+        <p class="muted type-body-s" style="margin: 0;">{{ campaign.goal }}</p>
+      </div>
+      <span class="badge badge-pending">{{ campaign.tone }}</span>
+    </div>
+    <form class="filter-bar" style="margin-top: 12px;" hx-post="/campaigns/{{ campaign.id }}/generate" hx-target="#gen-{{ campaign.id }}" hx-swap="innerHTML">
+      <label class="field">
+        <input type="number" name="limit" value="5" min="1" max="50">
+        <span>Drafts</span>
+      </label>
+      <label class="field">
+        <input type="number" name="min_score" value="0.3" step="0.05" min="0" max="1">
+        <span>Min fit</span>
+      </label>
+      <label class="field" style="flex: 2 1 240px;">
+        <input type="text" name="instructions" placeholder=" ">
+        <span>Instructions (optional)</span>
+      </label>
+      <button class="btn btn-filled btn-sm" type="submit">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-sparkle"></use></svg>
+        Generate
+      </button>
+    </form>
+    <div id="gen-{{ campaign.id }}" style="margin-top: 12px;"></div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-campaign"></use></svg>
+    <p>No campaigns yet</p>
+    <span class="type-body-s">A campaign holds the goal, tone, and generated drafts for one outreach push.</span>
+    <button class="btn btn-filled btn-sm" type="button" data-dialog-open="#campaign-dialog">Create a campaign</button>
+  </div>
+</div>
+{% endif %}
+
+<dialog class="dialog" id="campaign-dialog" aria-label="New campaign">
+  <h2>New campaign</h2>
+  <form method="post" action="/campaigns">
+    <label class="field">
+      <input type="text" name="name" placeholder=" " required>
+      <span>Name (required)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="goal" placeholder=" ">
+      <span>Goal (defaults to profile goal)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="tone" placeholder=" ">
+      <span>Tone (defaults to profile tone)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="language" value="en" placeholder=" ">
+      <span>Language</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Save campaign</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

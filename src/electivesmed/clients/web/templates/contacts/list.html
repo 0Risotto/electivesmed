@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Contacts · electivesmed{% endblock %}
+{% block page_title %}Contacts{% endblock %}
+{% block app_bar_actions %}
+<button class="btn btn-filled btn-sm" type="button" data-dialog-open="#import-dialog">
+  <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-upload"></use></svg>
+  Import CSV
+</button>
+{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="spread">
+    <div class="chips">
+      <span class="chip chip-meta tnum">{{ summary.contacts }} contacts</span>
+      <span class="chip chip-meta tnum">{{ summary.contacts_scored }} scored</span>
+      <span class="chip chip-meta tnum">{{ summary.contacts_with_email }} with email</span>
+    </div>
+    <div class="row">
+      <button class="btn btn-tonal btn-sm" type="button" data-dialog-open="#score-dialog">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-tune"></use></svg>
+        Score
+      </button>
+      <button class="btn btn-outlined btn-sm" type="button" data-dialog-open="#scout-dialog">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-sparkle"></use></svg>
+        Scout (agent)
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <form class="filter-bar" method="get" action="/contacts">
+    <label class="field">
+      <input type="text" name="q" value="{{ q }}" placeholder=" ">
+      <span>Search name, title, hospital</span>
+    </label>
+    <label class="field">
+      <input type="text" name="country" value="{{ country }}" placeholder=" " maxlength="2">
+      <span>Country (e.g. DE)</span>
+    </label>
+    <button class="btn btn-filled btn-sm" type="submit">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-search"></use></svg>
+      Apply
+    </button>
+  </form>
+  <div class="chips" style="margin-top: 8px;">
+    <a class="chip {% if not status %}chip-selected{% endif %}" href="/contacts?{% if q %}q={{ q }}&{% endif %}{% if country %}country={{ country }}{% endif %}">all</a>
+    {% for option in ["new", "scored", "skipped", "suppressed"] %}
+    <a class="chip {% if status == option %}chip-selected{% endif %}"
+       href="/contacts?status={{ option }}{% if q %}&q={{ q }}{% endif %}{% if country %}&country={{ country }}{% endif %}">{{ option }}</a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Name</th><th>Title</th><th>Hospital</th><th>Country</th><th>Email</th><th>Fit</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for contact in contacts %}
+      <tr>
+        <td data-label="#"><a href="/contacts/{{ contact.id }}">{{ contact.id }}</a></td>
+        <td data-label="Name">{{ contact.name or "-" }}</td>
+        <td data-label="Title">{{ contact.title or "-" }}</td>
+        <td data-label="Hospital">{{ contact.hospital or "-" }}</td>
+        <td data-label="Country">{{ contact.country or "-" }}</td>
+        <td data-label="Email">{{ contact.email or "-" }}</td>
+        <td data-label="Fit" class="tnum">{% if contact.fit_percent is not none %}{{ contact.fit_percent }}%{% else %}-{% endif %}</td>
+        <td data-label="Status"><span class="badge badge-{{ contact.status }}">{{ contact.status }}</span></td>
+        <td><a class="btn btn-text btn-sm" href="/contacts/{{ contact.id }}">Open</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">
+        <div class="empty">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-contacts"></use></svg>
+          <p>No contacts</p>
+          <span class="type-body-s">Import a CSV or run the scout agent.</span>
+        </div>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<dialog class="dialog" id="import-dialog" aria-label="Import contacts">
+  <h2>Import contacts</h2>
+  <form method="post" action="/contacts/import" enctype="multipart/form-data">
+    <label class="field field-static">
+      <input type="file" name="upload" accept=".csv" required>
+      <span>CSV file (name, title, email, hospital_name, city, state, country, lawful_basis)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="hospital" placeholder=" ">
+      <span>Default hospital (optional)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="country" placeholder=" " maxlength="2">
+      <span>Default country (optional)</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Import</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dialog" id="score-dialog" aria-label="Score contacts">
+  <h2>Score contacts</h2>
+  <p class="muted type-body-s">Ranks contacts against <code>config/profile.yaml</code>. Uses DeepSeek when a key is configured, otherwise the keyword heuristic.</p>
+  <form method="post" action="/contacts/score">
+    <label class="field">
+      <input type="number" name="limit" value="50" min="1" max="500">
+      <span>Contacts to score</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Score</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dialog" id="scout-dialog" aria-label="Run scout">
+  <h2>Scout (agent)</h2>
+  <p class="muted type-body-s">The scout fetches public hospital and staff pages, extracts contacts, and scores them. Runs in the background.</p>
+  <form hx-post="/contacts/scout" hx-target="#scout-result" hx-swap="innerHTML">
+    <label class="field">
+      <input type="text" name="instructions" placeholder=" ">
+      <span>Extra instructions (optional)</span>
+    </label>
+    <label class="field">
+      <input type="text" name="campaign" placeholder=" ">
+      <span>Campaign name (optional)</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Run scout</button>
+    </div>
+  </form>
+  <div id="scout-result" style="margin-top: 12px;"></div>
+</dialog>
+{% endblock %}

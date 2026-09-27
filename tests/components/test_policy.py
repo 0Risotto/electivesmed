@@ -283,3 +283,83 @@ def test_save_draft_blocked_for_us_without_address(container, seeded, policy_gat
     decision = policy_gate.check_save_draft(contact, "Subject", C.CLEAN_BODY)
     assert not decision.allowed
     assert "postal address" in decision.reason
+
+
+# -------------------------------------------------------------- attachments
+
+
+def _upload_and_attach(container, draft_id, cv_pdf):
+    from electivesmed.services.attachments import add_attachment, attach_to_draft
+
+    attachment = add_attachment(container, "cv.pdf", cv_pdf)
+    attach_to_draft(container, draft_id, attachment.id)
+    return attachment
+
+
+def test_send_denied_when_too_many_attachments(container, approved, policy_gate, cv_pdf):
+    _upload_and_attach(container, approved["draft_id"], cv_pdf)
+    container.settings.attachments.max_files = 0
+    draft = container.dao.get_draft(approved["draft_id"])
+    contact = container.dao.get_contact(approved["contact_id"])
+
+    decision = policy_gate.check_send(draft, contact, dry_run=True)
+    assert not decision.allowed
+    assert "per-email limit" in decision.reason
+
+
+def test_send_denied_when_total_size_exceeded(container, approved, policy_gate, cv_pdf):
+    _upload_and_attach(container, approved["draft_id"], cv_pdf)
+    container.settings.attachments.max_total_mb = 0
+    draft = container.dao.get_draft(approved["draft_id"])
+    contact = container.dao.get_contact(approved["contact_id"])
+
+    decision = policy_gate.check_send(draft, contact, dry_run=True)
+    assert not decision.allowed
+    assert "MB limit" in decision.reason
+
+
+def test_send_denied_when_attachment_type_not_allowed(container, approved, policy_gate):
+    import hashlib
+
+    from electivesmed.models.entities import Attachment
+
+    payload = b"MZ fake executable"
+    attachment = Attachment(
+        filename="tool.exe",
+        content_type="application/x-msdownload",
+        size=len(payload),
+        sha256=hashlib.sha256(payload).hexdigest(),
+        data=payload,
+    )
+    attachment_id = container.dao.save_attachment(attachment)
+    container.dao.attach_to_draft(approved["draft_id"], attachment_id)
+    draft = container.dao.get_draft(approved["draft_id"])
+    contact = container.dao.get_contact(approved["contact_id"])
+
+    decision = policy_gate.check_send(draft, contact, dry_run=True)
+    assert not decision.allowed
+    assert "not allowed" in decision.reason
+
+
+def test_send_denied_when_attachment_too_large(container, approved, policy_gate, cv_pdf):
+    _upload_and_attach(container, approved["draft_id"], cv_pdf)
+    container.settings.attachments.max_file_mb = 0
+    draft = container.dao.get_draft(approved["draft_id"])
+    contact = container.dao.get_contact(approved["contact_id"])
+
+    decision = policy_gate.check_send(draft, contact, dry_run=True)
+    assert not decision.allowed
+    assert "per-file size limit" in decision.reason
+
+
+def test_attachments_check_skips_unsaved_draft(policy_gate):
+    from electivesmed.models.entities import Draft
+
+    draft = Draft(
+        invocation_id=C.INVOCATION_ID,
+        contact_id=1,
+        subject="Unsaved",
+        body_text=C.CLEAN_BODY,
+    )
+
+    assert policy_gate.check_attachments(draft).allowed

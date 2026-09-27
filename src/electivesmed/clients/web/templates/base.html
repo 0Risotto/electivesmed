@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#006A6A">
+  <title>{% block title %}electivesmed{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/md3.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  {% set path = request.url.path %}
+  {% macro navitem(href, icon, label, match=None) -%}
+  <a class="nav-item {% if path.startswith(match or href) %}active{% endif %}"
+     href="{{ href }}" {% if path.startswith(match or href) %}aria-current="page"{% endif %}>
+    <span class="nav-pill"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#{{ icon }}"></use></svg></span>
+    <span>{{ label }}</span>
+  </a>
+  {%- endmacro %}
+
+  <div class="shell">
+    <nav class="rail" aria-label="Primary">
+      {{ navitem("/", "i-dashboard", "Home") }}
+      {{ navitem("/contacts", "i-contacts", "Contacts") }}
+      {{ navitem("/drafts", "i-drafts", "Drafts") }}
+      {{ navitem("/campaigns", "i-campaign", "Campaigns") }}
+      {{ navitem("/send", "i-send", "Send") }}
+      {{ navitem("/documents", "i-upload", "Docs") }}
+      {{ navitem("/sources", "i-source", "Sources") }}
+      {{ navitem("/compliance", "i-compliance", "Compliance") }}
+      {{ navitem("/settings", "i-tune", "Settings") }}
+    </nav>
+
+    <div class="main">
+      <header class="app-bar">
+        <button class="icon-btn drawer-toggle" type="button" aria-label="Open navigation"
+                data-dialog-open="#drawer">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-menu"></use></svg>
+        </button>
+        <h1 class="app-bar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="app-bar-actions">
+          {% block app_bar_actions %}{% endblock %}
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-theme"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="content">
+        {% if request.query_params.get('flash') %}
+        <div class="snackbar" id="snackbar" role="status" aria-live="polite">
+          <span>{{ request.query_params.get('flash') }}</span>
+          <button class="btn btn-text" type="button" data-snackbar-dismiss>Dismiss</button>
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+
+      <nav class="bottom-nav" aria-label="Primary">
+        {{ navitem("/", "i-dashboard", "Home") }}
+        {{ navitem("/contacts", "i-contacts", "Contacts") }}
+        {{ navitem("/drafts", "i-drafts", "Drafts") }}
+        {{ navitem("/send", "i-send", "Send") }}
+        <button class="nav-item" type="button" data-dialog-open="#drawer">
+          <span class="nav-pill"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-more"></use></svg></span>
+          <span>More</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <dialog class="drawer" id="drawer" aria-label="More navigation">
+    <div class="spread" style="margin-bottom: 8px;">
+      <strong>electivesmed</strong>
+      <button class="icon-btn" type="button" aria-label="Close navigation" data-dialog-close>
+        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-close"></use></svg>
+      </button>
+    </div>
+    {{ navitem("/", "i-dashboard", "Dashboard") }}
+    {{ navitem("/contacts", "i-contacts", "Contacts") }}
+    {{ navitem("/drafts", "i-drafts", "Drafts") }}
+    {{ navitem("/campaigns", "i-campaign", "Campaigns") }}
+    {{ navitem("/send", "i-send", "Send") }}
+    {{ navitem("/documents", "i-upload", "Documents") }}
+    {{ navitem("/sources", "i-source", "Sources") }}
+    {{ navitem("/compliance", "i-compliance", "Compliance") }}
+    {{ navitem("/settings", "i-tune", "Settings") }}
+  </dialog>
+</body>
+</html>

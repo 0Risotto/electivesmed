@@ -9,8 +9,12 @@ build/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/pepper.key
+data/session.key
 data/cache/
 data/exports/
+config/*.yaml.bak
+config/*.yml.bak
 nohup.out
 .DS_Store
 .coverage

@@ -4,7 +4,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ..models.entities import Campaign, Contact, Draft, Hospital, Send
+from ..models.entities import Attachment, Campaign, Contact, Draft, Hospital, Send, User
 from ..models.enums import (
     ContactStatus,
     DraftStatus,
@@ -93,6 +93,27 @@ def send_from_row(row: sqlite3.Row) -> Send:
         status=SendStatus(row["status"]),
         error=row["error"],
         sent_at=parse_dt(row["sent_at"]) or utcnow(),
+    )
+
+
+def user_from_row(row: sqlite3.Row) -> User:
+    return User(
+        id=row["id"],
+        username=row["username"],
+        password_hash=row["password_hash"],
+        created_at=parse_dt(row["created_at"]) or utcnow(),
+        updated_at=parse_dt(row["updated_at"]) or utcnow(),
+    )
+
+
+def attachment_from_row(row: sqlite3.Row) -> Attachment:
+    return Attachment(
+        id=row["id"],
+        filename=row["filename"],
+        content_type=row["content_type"],
+        size=row["size"],
+        sha256=row["sha256"],
+        created_at=parse_dt(row["created_at"]) or utcnow(),
     )
 
 

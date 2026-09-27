@@ -1,7 +1,7 @@
 """Builder: MailPayload construction from drafts and contacts."""
 
 from ..compliance import OPT_OUT_SENTENCE
-from ..models.entities import Contact, Draft, MailPayload
+from ..models.entities import Contact, Draft, MailAttachment, MailPayload
 
 
 def build_payload(
@@ -13,6 +13,7 @@ def build_payload(
     postal_address: str = "",
     sender_name: str = "",
     organization: str = "",
+    attachments: list[MailAttachment] | None = None,
 ) -> MailPayload:
     body = draft.body_text.strip()
     if include_opt_out and OPT_OUT_SENTENCE not in body:
@@ -35,4 +36,5 @@ def build_payload(
         body_text=body,
         body_html=draft.body_html,
         headers=headers,
+        attachments=attachments or [],
     )

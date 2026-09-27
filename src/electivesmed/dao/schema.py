@@ -1,6 +1,6 @@
 """SQLite schema definition, version, and migrations."""
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -94,6 +94,34 @@ CREATE TABLE IF NOT EXISTS invocations (
     started_at TEXT NOT NULL,
     finished_at TEXT
 );
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    sha256 TEXT UNIQUE NOT NULL,
+    data BLOB NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS draft_attachments (
+    draft_id INTEGER NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+    attachment_id INTEGER NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+    PRIMARY KEY (draft_id, attachment_id)
+);
+CREATE TABLE IF NOT EXISTS sent_attachments (
+    send_id INTEGER NOT NULL REFERENCES sends(id) ON DELETE CASCADE,
+    attachment_id INTEGER REFERENCES attachments(id) ON DELETE SET NULL,
+    filename TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    PRIMARY KEY (send_id, filename)
+);
 """
 
 # Applied in order when a stored database is older than SCHEMA_VERSION.
@@ -102,5 +130,22 @@ MIGRATIONS: dict[int, list[str]] = {
         "ALTER TABLE contacts ADD COLUMN country TEXT",
         "ALTER TABLE contacts ADD COLUMN timezone TEXT",
         "ALTER TABLE contacts ADD COLUMN lawful_basis TEXT NOT NULL DEFAULT 'unknown'",
+    ],
+    3: [
+        "CREATE TABLE IF NOT EXISTS users ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,"
+        "password_hash TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS attachments ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL,"
+        "content_type TEXT NOT NULL, size INTEGER NOT NULL, sha256 TEXT UNIQUE NOT NULL,"
+        "data BLOB NOT NULL, created_at TEXT NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS draft_attachments ("
+        "draft_id INTEGER NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,"
+        "attachment_id INTEGER NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,"
+        "PRIMARY KEY (draft_id, attachment_id))",
+        "CREATE TABLE IF NOT EXISTS sent_attachments ("
+        "send_id INTEGER NOT NULL REFERENCES sends(id) ON DELETE CASCADE,"
+        "attachment_id INTEGER REFERENCES attachments(id) ON DELETE SET NULL,"
+        "filename TEXT NOT NULL, size INTEGER NOT NULL, PRIMARY KEY (send_id, filename))",
     ],
 }

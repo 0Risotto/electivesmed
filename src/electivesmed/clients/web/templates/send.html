@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Send · electivesmed{% endblock %}
+{% block page_title %}Send{% endblock %}
+{% block content %}
+
+<section class="card">
+  <ol class="stepper">
+    <li class="done"><span class="step-num">1</span> Dry-run preview</li>
+    <li class="current"><span class="step-num">2</span> Review approvals</li>
+    <li><span class="step-num">3</span> Send</li>
+  </ol>
+  <p class="muted type-body-s" style="margin: 12px 0 0;">
+    Sends respect the recipient-local window ({{ "Tue-Thu" }} default), daily and per-domain caps,
+    jurisdiction rules, and the suppression list. Real sends are throttled 60-180s apart.
+  </p>
+</section>
+
+{% if drafts %}
+<form method="post" action="/send/dry-run" class="stack">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>#</th><th>To</th><th>Subject</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for draft in drafts %}
+        <tr>
+          <td><input type="checkbox" name="draft_ids" value="{{ draft.id }}" checked aria-label="Select draft {{ draft.id }}"></td>
+          <td>{{ draft.id }}</td>
+          <td>{{ draft.to_email or "-" }}</td>
+          <td>{{ draft.subject }}</td>
+          <td><span class="badge badge-{{ draft.status }}">{{ draft.status }}</span></td>
+          <td><a class="btn btn-text btn-sm" href="/drafts/{{ draft.id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row">
+    <button class="btn btn-tonal" type="submit">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-mail"></use></svg>
+      Dry-run preview
+    </button>
+    <label class="row type-body-s" style="gap: 8px;">
+      <input type="checkbox" name="force_window" value="true">
+      ignore recipient send window (preview only)
+    </label>
+    <button class="btn btn-danger row-end" type="button" data-dialog-open="#send-dialog">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-send"></use></svg>
+      Send approved drafts
+    </button>
+  </div>
+</form>
+
+<dialog class="dialog" id="send-dialog" aria-label="Confirm real send">
+  <h2>Send {{ drafts|length }} real emails?</h2>
+  <p class="muted type-body-s">
+    Every message is policy-checked and throttled. Type <strong>SEND {{ drafts|length }}</strong> to confirm.
+  </p>
+  <form method="post" action="/send/real">
+    <label class="field">
+      <input type="text" name="confirm" placeholder=" " autocomplete="off"
+             data-confirm-expect="SEND {{ drafts|length }}">
+      <span>Confirmation</span>
+    </label>
+    <label class="row type-body-s" style="gap: 8px;">
+      <input type="checkbox" name="force_window" value="true">
+      ignore recipient send window
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-danger" type="submit" data-confirm-submit disabled>Send</button>
+    </div>
+  </form>
+  <div id="send-job" style="margin-top: 12px;"></div>
+</dialog>
+{% else %}
+<div class="card">
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-send"></use></svg>
+    <p>No approved drafts</p>
+    <span class="type-body-s">Approve drafts in the inbox, then come back to preview and send.</span>
+    <a class="btn btn-filled btn-sm" href="/drafts">Open drafts</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

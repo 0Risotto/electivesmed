@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name or "Contact" }} · electivesmed{% endblock %}
+{% block page_title %}{{ contact.name or "Contact" }}{% endblock %}
+{% block app_bar_actions %}
+<a class="btn btn-text btn-sm" href="/contacts">Back</a>
+{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="row">
+    <div class="item-main">
+      <h2 class="card-title" style="margin-bottom: 2px;">{{ contact.title or "No title" }}</h2>
+      <p class="muted" style="margin: 0;">{{ contact.hospital_name or "Unknown hospital" }} · {{ contact.email_value or "no email" }}</p>
+    </div>
+    <span class="badge badge-pending">{{ contact.status }}</span>
+  </div>
+  <div class="chips" style="margin-top: 12px;">
+    <span class="chip chip-meta">{{ contact.country or "country unknown" }}</span>
+    <span class="chip chip-meta">basis: {{ contact.lawful_basis }}</span>
+    {% if contact.fit_score is not none %}
+    <span class="chip chip-meta tnum">fit {{ "%.2f"|format(contact.fit_score) }}</span>
+    {% endif %}
+  </div>
+  {% if contact.fit_reasons %}
+  <div class="chips" style="margin-top: 8px;">
+    {% for reason in contact.fit_reasons %}<span class="chip">{{ reason }}</span>{% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<div class="grid grid-2">
+  <section class="card">
+    <h2 class="card-title">Compliance</h2>
+    <form method="post" action="/contacts/{{ contact.id }}/compliance">
+      <label class="field">
+        <input type="text" name="country" value="{{ contact.country or '' }}" placeholder=" " maxlength="2">
+        <span>Country code</span>
+      </label>
+      <label class="field">
+        <input type="text" name="timezone" value="{{ contact.timezone or '' }}" placeholder=" ">
+        <span>Timezone (e.g. Europe/Berlin)</span>
+      </label>
+      <label class="field field-static">
+        <select name="lawful_basis">
+          {% for basis in lawful_bases %}
+          <option value="{{ basis }}" {% if contact.lawful_basis == basis %}selected{% endif %}>{{ basis }}</option>
+          {% endfor %}
+        </select>
+        <span>Lawful basis</span>
+      </label>
+      <button class="btn btn-filled btn-sm" type="submit">Save</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Data rights</h2>
+    <p class="muted type-body-s">Access and erasure for this contact (GDPR/CCPA).</p>
+    <div class="row">
+      <a class="btn btn-outlined btn-sm" href="/contacts/{{ contact.id }}/export">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-download"></use></svg>
+        Export JSON
+      </a>
+      <button class="btn btn-danger btn-sm" type="button" data-dialog-open="#erase-dialog">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-delete"></use></svg>
+        Erase
+      </button>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <h2 class="card-title">Drafts</h2>
+  {% if drafts %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Subject</th><th>Status</th><th>Confidence</th><th></th></tr></thead>
+      <tbody>
+        {% for draft in drafts %}
+        <tr>
+          <td>{{ draft.id }}</td>
+          <td>{{ draft.subject }}</td>
+          <td><span class="badge badge-{{ draft.status }}">{{ draft.status }}</span></td>
+          <td class="tnum">{{ "%.2f"|format(draft.confidence) }}</td>
+          <td><a class="btn btn-text btn-sm" href="/drafts/{{ draft.id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-drafts"></use></svg>
+    <p>No drafts yet</p>
+    <span class="type-body-s">Generate from a campaign to draft an email for this contact.</span>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 class="card-title">Sends</h2>
+  {% if sends %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>To</th><th>Status</th><th>Sent at</th><th>Error</th></tr></thead>
+      <tbody>
+        {% for send in sends %}
+        <tr>
+          <td>{{ send.to_email or "-" }}</td>
+          <td><span class="badge badge-{{ send.status }}">{{ send.status }}</span></td>
+          <td class="muted type-body-s">{{ send.sent_at }}</td>
+          <td>{% if send.error %}<span class="error">{{ send.error }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted" style="margin: 0;">Nothing sent yet.</p>
+  {% endif %}
+</section>
+
+<dialog class="dialog" id="erase-dialog" aria-label="Erase contact">
+  <h2>Erase contact data</h2>
+  <p class="muted type-body-s">This deletes the contact, all drafts, and send history, and adds the address to the suppression list. Type <strong>{{ contact.email_value }}</strong> to confirm.</p>
+  <form method="post" action="/contacts/{{ contact.id }}/erase">
+    <label class="field">
+      <input type="text" name="confirm" placeholder=" " data-confirm-expect="{{ contact.email_value or '' }}" autocomplete="off">
+      <span>Email address</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-danger" type="submit" data-confirm-submit disabled>Erase</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

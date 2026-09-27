@@ -1,5 +1,6 @@
 import electivesmed.clients.cli.app as app_module
 from electivesmed.clients.cli.app import app
+from electivesmed.di.providers import provide_container
 from electivesmed.models.entities import Campaign
 from electivesmed.models.enums import DraftStatus, InvocationStatus
 from electivesmed.models.invocation import Invocation
@@ -445,3 +446,100 @@ def test_import_csv_country_option(runner, cli_container, tmp_path):
     assert result.exit_code == 0
     contact = cli_container.dao.find_contacts(with_email_only=True)[0]
     assert contact.country == "US"
+
+
+def test_web_command_starts_uvicorn(runner, monkeypatch):
+    import sys
+    import types
+
+    calls: dict = {}
+    fake_uvicorn = types.ModuleType("uvicorn")
+
+    def fake_run(app, host, port):
+        calls.update(app=app, host=host, port=port)
+
+    fake_uvicorn.run = fake_run
+    monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
+
+    import electivesmed.clients.web.app as web_app
+
+    monkeypatch.setattr(web_app, "create_app", lambda: "APP")
+
+    result = runner.invoke(app, ["web", "--host", "0.0.0.0", "--port", "9999"])
+
+    assert result.exit_code == 0
+    assert calls == {"app": "APP", "host": "0.0.0.0", "port": 9999}
+
+
+# ------------------------------------------------------------ accounts + docs
+
+
+def test_user_set_password_cli(runner, tmp_path, monkeypatch):
+    db_path = tmp_path / "users.db"
+    monkeypatch.setenv("EL_DB_PATH", str(db_path))
+
+    created = runner.invoke(
+        app,
+        ["user", "set-password", "--username", "cli-user", "--password", "correct-horse-battery"],
+    )
+    assert created.exit_code == 0
+    assert "created" in created.output
+
+    with provide_container(db_path=db_path) as container:
+        assert container.dao.find_user("cli-user") is not None
+
+    updated = runner.invoke(
+        app,
+        ["user", "set-password", "--username", "cli-user", "--password", "another-long-passphrase"],
+    )
+    assert updated.exit_code == 0
+    assert "updated" in updated.output
+
+
+def test_user_set_password_rejects_weak(runner, tmp_path, monkeypatch):
+    monkeypatch.setenv("EL_DB_PATH", str(tmp_path / "users.db"))
+
+    result = runner.invoke(
+        app, ["user", "set-password", "--username", "cli-user", "--password", "short"]
+    )
+
+    assert result.exit_code == 1
+    assert "at least" in result.output
+
+
+def test_user_set_password_prompt_mismatch(runner, tmp_path, monkeypatch):
+    import electivesmed.clients.cli.app as cli_module
+
+    monkeypatch.setenv("EL_DB_PATH", str(tmp_path / "users.db"))
+    answers = iter(["long-enough-passphrase", "different-passphrase"])
+    monkeypatch.setattr(cli_module.getpass, "getpass", lambda prompt="": next(answers))
+
+    result = runner.invoke(app, ["user", "set-password"])
+
+    assert result.exit_code == 1
+    assert "do not match" in result.output
+
+
+def test_documents_add_and_list(runner, tmp_path, monkeypatch):
+    monkeypatch.setenv("EL_DB_PATH", str(tmp_path / "docs.db"))
+    pdf_path = tmp_path / "cv.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\nminimal")
+
+    added = runner.invoke(app, ["documents", "add", str(pdf_path)])
+    assert added.exit_code == 0
+    assert "cv.pdf" in added.output
+
+    listing = runner.invoke(app, ["documents", "list"])
+    assert listing.exit_code == 0
+    assert "cv.pdf" in listing.output
+
+
+def test_documents_add_rejects_invalid_file(runner, tmp_path, monkeypatch):
+    monkeypatch.setenv("EL_DB_PATH", str(tmp_path / "docs.db"))
+    bad_path = tmp_path / "cv.txt"
+    bad_path.write_bytes(b"not a document")
+
+    result = runner.invoke(app, ["documents", "add", str(bad_path)])
+
+    assert result.exit_code == 1
+    assert "unsupported" in result.output

@@ -1,19 +1,39 @@
 """Shared fixtures for the test suite."""
 
 import json
+import os
+import shutil
+import tempfile
 from pathlib import Path
 
-import pytest
+# Point all runtime files at an isolated temp root BEFORE importing the app.
+_TEST_ROOT = Path(tempfile.mkdtemp(prefix="electivesmed-tests-"))
+(_TEST_ROOT / "config").mkdir(parents=True, exist_ok=True)
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+for _name in ("settings.yaml", "profile.yaml"):
+    shutil.copy(_REPO_ROOT / "config" / _name, _TEST_ROOT / "config" / _name)
+os.environ.setdefault("EL_SETTINGS_PATH", str(_TEST_ROOT / "config" / "settings.yaml"))
+os.environ.setdefault("EL_PROFILE_PATH", str(_TEST_ROOT / "config" / "profile.yaml"))
+os.environ.setdefault("EL_ENV_PATH", str(_TEST_ROOT / ".env"))
+os.environ.setdefault("EL_PEPPER_PATH", str(_TEST_ROOT / "pepper.key"))
+os.environ.setdefault("EL_SESSION_KEY_PATH", str(_TEST_ROOT / "session.key"))
+# Fast scrypt params for tests only; production defaults are N=2^17 in security.py.
+os.environ.setdefault("EL_SCRYPT_N", "16384")
+os.environ.setdefault("EL_SCRYPT_R", "8")
+os.environ.setdefault("EL_SCRYPT_P", "1")
+os.environ.setdefault("EL_SCRYPT_DKLEN", "64")
 
-from electivesmed.context import reset_invocation, set_invocation
-from electivesmed.di.providers import provide_container
-from electivesmed.models.entities import Contact, Draft, Hospital
-from electivesmed.models.enums import DraftStatus
-from electivesmed.models.invocation import InvocationContext
-from electivesmed.models.values import EmailAddress
+import pytest  # noqa: E402
 
-from . import constants as C
-from .fakes import FakeFetch, FakeLlm, FakeMail, FakeReply, KeepOpen
+from electivesmed.context import reset_invocation, set_invocation  # noqa: E402
+from electivesmed.di.providers import provide_container  # noqa: E402
+from electivesmed.models.entities import Contact, Draft, Hospital  # noqa: E402
+from electivesmed.models.enums import DraftStatus  # noqa: E402
+from electivesmed.models.invocation import InvocationContext  # noqa: E402
+from electivesmed.models.values import EmailAddress  # noqa: E402
+
+from . import constants as C  # noqa: E402
+from .fakes import FakeFetch, FakeLlm, FakeMail, FakeReply, KeepOpen  # noqa: E402
 
 SAMPLES_DIR = Path(__file__).resolve().parents[1] / "data" / "samples"
 
@@ -44,6 +64,16 @@ def staff_page_html(samples_dir) -> bytes:
 @pytest.fixture(scope="session")
 def contacts_csv(samples_dir) -> Path:
     return samples_dir / "contacts.csv"
+
+
+@pytest.fixture(scope="session")
+def cv_pdf(samples_dir) -> bytes:
+    return (samples_dir / "cv_sample.pdf").read_bytes()
+
+
+@pytest.fixture(scope="session")
+def certificate_png(samples_dir) -> bytes:
+    return (samples_dir / "certificate_sample.png").read_bytes()
 
 
 @pytest.fixture(scope="session")

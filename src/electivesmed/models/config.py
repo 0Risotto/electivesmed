@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field
 from ..constants.limits import (
     DAILY_SEND_CAP,
     LLM_TEMPERATURE,
+    MAX_ATTACHMENT_BYTES,
+    MAX_ATTACHMENT_TOTAL_BYTES,
+    MAX_ATTACHMENTS_PER_EMAIL,
     MAX_SEND_DELAY_SECONDS,
     MIN_SEND_DELAY_SECONDS,
     PER_DOMAIN_CAP,
@@ -84,6 +87,17 @@ class ComplianceConfig(BaseModel):
     jurisdiction_overrides: dict[str, dict] = Field(default_factory=dict)
 
 
+class WebConfig(BaseModel):
+    require_login: bool = True
+
+
+class AttachmentConfig(BaseModel):
+    defaults: list[str] = Field(default_factory=list)
+    max_files: int = MAX_ATTACHMENTS_PER_EMAIL
+    max_file_mb: int = MAX_ATTACHMENT_BYTES // (1024 * 1024)
+    max_total_mb: int = MAX_ATTACHMENT_TOTAL_BYTES // (1024 * 1024)
+
+
 class Settings(BaseModel):
     sender: SenderConfig = Field(default_factory=SenderConfig)
     limits: LimitConfig = Field(default_factory=LimitConfig)
@@ -92,6 +106,8 @@ class Settings(BaseModel):
     smtp: SmtpConfig = Field(default_factory=SmtpConfig)
     sources: SourceConfig = Field(default_factory=SourceConfig)
     compliance: ComplianceConfig = Field(default_factory=ComplianceConfig)
+    attachments: AttachmentConfig = Field(default_factory=AttachmentConfig)
+    web: WebConfig = Field(default_factory=WebConfig)
 
 
 class Profile(BaseModel):

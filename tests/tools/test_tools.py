@@ -117,3 +117,35 @@ def test_suppress_contact_action_tool(container):
     result = _action_tools_by_name(container)["suppress_contact"](C.CONTACT_EMAIL, "manual")
 
     assert result["status"] == "suppressed"
+
+
+def test_save_draft_tool_attaches_defaults(container, seeded, invocation_ctx, cv_pdf):
+    from electivesmed.services.attachments import add_attachment
+
+    add_attachment(container, "cv.pdf", cv_pdf)
+    container.settings.attachments.defaults = ["cv.pdf"]
+
+    result = _action_tools_by_name(container)["save_draft"](
+        contact_id=seeded["contact_id"],
+        campaign_name=C.CAMPAIGN_NAME,
+        subject="A short subject",
+        body_text=C.CLEAN_BODY,
+    )
+
+    assert result["attachments"] == ["cv.pdf"]
+
+
+def test_save_draft_tool_attaches_explicit_names(container, seeded, invocation_ctx, cv_pdf):
+    from electivesmed.services.attachments import add_attachment
+
+    add_attachment(container, "cv.pdf", cv_pdf)
+
+    result = _action_tools_by_name(container)["save_draft"](
+        contact_id=seeded["contact_id"],
+        campaign_name=C.CAMPAIGN_NAME,
+        subject="A short subject",
+        body_text=C.CLEAN_BODY,
+        attachments="cv.pdf, missing.pdf",
+    )
+
+    assert result["attachments"] == ["cv.pdf"]

@@ -25,7 +25,7 @@ def test_init_schema_is_idempotent(dao):
     row = dao._conn.execute(
         "SELECT value FROM schema_meta WHERE key = 'schema_version'"
     ).fetchone()
-    assert row["value"] == "2"
+    assert row["value"] == "3"
 
 
 def test_init_schema_migrates_v1_database(tmp_path):
@@ -53,7 +53,7 @@ def test_init_schema_migrates_v1_database(tmp_path):
     version = migrated._conn.execute(
         "SELECT value FROM schema_meta WHERE key = 'schema_version'"
     ).fetchone()
-    assert version["value"] == "2"
+    assert version["value"] == "3"
 
     migrated._conn.execute(
         "INSERT INTO contacts (email, created_at) VALUES ('a@b.org', '2026-01-01T00:00:00')"
@@ -446,3 +446,119 @@ def test_export_contact_unknown_email(dao):
     assert export["drafts"] == []
     assert export["sends"] == []
     assert export["hospitals"] == []
+
+
+def test_update_contact_compliance(dao, contact_id):
+    dao.update_contact_compliance(contact_id, "DE", "Europe/Berlin", "consent")
+
+    contact = dao.get_contact(contact_id)
+    assert (contact.country, contact.timezone, contact.lawful_basis) == (
+        "DE",
+        "Europe/Berlin",
+        "consent",
+    )
+
+
+def test_get_campaign_by_id_and_find(dao):
+    campaign_id = dao.upsert_campaign(Campaign(name=C.CAMPAIGN_NAME, goal="g"))
+
+    assert dao.get_campaign_by_id(campaign_id).name == C.CAMPAIGN_NAME
+    assert dao.get_campaign_by_id(999) is None
+    assert [c.name for c in dao.find_campaigns()] == [C.CAMPAIGN_NAME]
+
+
+def test_dao_is_usable_from_other_threads(dao, hospital_id):
+    import threading
+
+    errors: list = []
+
+    def worker():
+        try:
+            assert dao.summary()["hospitals"] == 1
+            dao.add_suppression("thread@example.org", "test")
+        except Exception as exc:  # pragma: no cover - failure path
+            errors.append(exc)
+
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join()
+
+    assert errors == []
+    assert dao.is_suppressed("thread@example.org")
+
+
+# --------------------------------------------------------------------- users
+
+
+def test_user_crud(dao):
+    assert dao.count_users() == 0
+
+    user_id = dao.create_user("alice", "hash-one")
+    assert dao.count_users() == 1
+    user = dao.find_user("alice")
+    assert user.id == user_id
+    assert user.password_hash == "hash-one"
+    assert dao.find_user("nobody") is None
+
+    dao.update_user_password("alice", "hash-two")
+    assert dao.find_user("alice").password_hash == "hash-two"
+
+
+# --------------------------------------------------------------- attachments
+
+
+def _attachment(cv_pdf):
+    import hashlib
+
+    from electivesmed.models.entities import Attachment
+
+    return Attachment(
+        filename="cv.pdf",
+        content_type="application/pdf",
+        size=len(cv_pdf),
+        sha256=hashlib.sha256(cv_pdf).hexdigest(),
+        data=cv_pdf,
+    )
+
+
+def test_attachment_crud_dedupe_and_joins(dao, draft_id, cv_pdf):
+    attachment = _attachment(cv_pdf)
+    attachment_id = dao.save_attachment(attachment)
+
+    assert dao.save_attachment(attachment) == attachment_id
+    assert dao.get_attachment(attachment_id).filename == "cv.pdf"
+    assert dao.get_attachment_data(attachment_id) == cv_pdf
+    assert dao.find_attachment_by_sha(attachment.sha256).id == attachment_id
+    assert [item.filename for item in dao.list_attachments()] == ["cv.pdf"]
+    assert dao.get_attachment(999) is None
+    assert dao.get_attachment_data(999) is None
+
+    dao.attach_to_draft(draft_id, attachment_id)
+    assert [item.id for item in dao.find_draft_attachments(draft_id)] == [attachment_id]
+    assert dao.delete_attachment(attachment_id) is True
+    assert dao.find_draft_attachments(draft_id) == []
+
+
+def test_sent_attachment_snapshot_blocks_delete(dao, draft_id, cv_pdf):
+    attachment_id = dao.save_attachment(_attachment(cv_pdf))
+    send_id = dao.record_send(
+        Send(
+            invocation_id=C.INVOCATION_ID,
+            draft_id=draft_id,
+            status=SendStatus.SENT,
+        )
+    )
+
+    dao.record_sent_attachments(send_id, [dao.get_attachment(attachment_id)])
+
+    assert dao.find_sent_attachments(send_id)[0]["filename"] == "cv.pdf"
+    assert dao.delete_attachment(attachment_id) is False
+
+
+def test_store_error_paths_for_users_and_attachments(dao, monkeypatch, cv_pdf):
+    monkeypatch.setattr(dao, "_conn", _NoRowConnection())
+
+    with pytest.raises(StoreError):
+        dao.create_user("broken", "hash")
+    with pytest.raises(StoreError):
+        dao.save_attachment(_attachment(cv_pdf))

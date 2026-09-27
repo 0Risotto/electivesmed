@@ -6,7 +6,9 @@ from email.message import EmailMessage
 from email.utils import make_msgid
 from typing import Protocol
 
+from ..constants.limits import SMTP_MAX_MESSAGE_BYTES
 from ..constants.providers import SMTP_TIMEOUT_SECONDS
+from ..errors import AttachmentError
 from ..models.entities import MailPayload, SendReceipt
 from ..models.enums import SendStatus
 
@@ -36,6 +38,11 @@ class SmtpAccessor:
         self.timeout = timeout
 
     def build_message(self, payload: MailPayload) -> EmailMessage:
+        total_attachment_bytes = sum(len(item.data) for item in payload.attachments)
+        if total_attachment_bytes > SMTP_MAX_MESSAGE_BYTES:
+            raise AttachmentError(
+                f"attachments exceed the {SMTP_MAX_MESSAGE_BYTES // (1024 * 1024)} MB message limit"
+            )
         msg = EmailMessage()
         msg["From"] = payload.from_email or self.from_email
         msg["To"] = payload.to
@@ -48,10 +55,42 @@ class SmtpAccessor:
         msg.set_content(payload.body_text)
         if payload.body_html:
             msg.add_alternative(payload.body_html, subtype="html")
+        for attachment in payload.attachments:
+            maintype, _, subtype = attachment.content_type.partition("/")
+            msg.add_attachment(
+                attachment.data,
+                maintype=maintype or "application",
+                subtype=subtype or "octet-stream",
+                filename=attachment.filename,
+            )
         return msg
 
+    def test_connection(self) -> tuple[bool, str]:
+        """Connect + STARTTLS + login without sending anything."""
+        if not self.host:
+            return False, "SMTP_HOST is not configured"
+        try:
+            with smtplib.SMTP(self.host, self.port, timeout=self.timeout) as server:
+                server.ehlo()
+                server.starttls(context=ssl.create_default_context())
+                server.ehlo()
+                if self.user:
+                    server.login(self.user, self.password)
+            return True, f"connected to {self.host}:{self.port}"
+        except Exception as exc:
+            return False, f"{type(exc).__name__}: {exc}"
+
     def send(self, payload: MailPayload, dry_run: bool = True) -> SendReceipt:
-        msg = self.build_message(payload)
+        try:
+            msg = self.build_message(payload)
+        except AttachmentError as exc:
+            return SendReceipt(
+                message_id=None,
+                accepted=False,
+                status=SendStatus.FAILED,
+                error=str(exc),
+                dry_run=dry_run,
+            )
         message_id = msg["Message-ID"]
 
         if dry_run:

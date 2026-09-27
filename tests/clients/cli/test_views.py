@@ -19,6 +19,7 @@ def _contact_view(**overrides) -> ContactView:
         title=C.CONTACT_TITLE,
         department="Cardiology",
         email=C.CONTACT_EMAIL,
+        country=None,
         fit_score=0.9,
         fit_percent=90,
         status="scored",

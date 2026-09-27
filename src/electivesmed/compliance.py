@@ -13,6 +13,14 @@ OPT_OUT_SENTENCE = (
     "and I'll remove you from my list."
 )
 
+ALLOWED_ATTACHMENT_CONTENT_TYPES = (
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+)
+
 SPAM_WORDS = (
     "free",
     "guarantee",

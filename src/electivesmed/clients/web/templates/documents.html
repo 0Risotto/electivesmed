@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Documents · electivesmed{% endblock %}
+{% block page_title %}Documents{% endblock %}
+{% block app_bar_actions %}
+<button class="btn btn-filled btn-sm" type="button" data-dialog-open="#upload-dialog">
+  <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg#i-upload"></use></svg>
+  Upload
+</button>
+{% endblock %}
+{% block content %}
+
+<section class="card">
+  <p class="muted type-body-s" style="margin: 0;">
+    CVs, certificates, and other documents you attach to outreach. Files are validated by content
+    (magic bytes), deduplicated by SHA-256, and stored in your local database.
+    Limits: {{ limits.max_files }} files per email, {{ limits.max_file_mb }} MB each,
+    {{ limits.max_total_mb }} MB total. Defaults are auto-attached to every new draft.
+  </p>
+</section>
+
+{% if documents %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Uploaded</th><th>Default</th><th></th></tr></thead>
+    <tbody>
+      {% for document in documents %}
+      <tr>
+        <td>{{ document.filename }}</td>
+        <td><span class="chip chip-meta">{{ document.content_type.split('/')[-1] }}</span></td>
+        <td class="tnum">{{ (document.size / 1024)|round(0) }} KB</td>
+        <td class="muted type-body-s">{{ document.created_at.strftime('%Y-%m-%d') }}</td>
+        <td>{% if document.filename in defaults %}<span class="badge badge-approved">default</span>{% endif %}</td>
+        <td class="row-actions">
+          <a class="btn btn-text btn-sm" href="/documents/{{ document.id }}/download">Download</a>
+          <form method="post" action="/documents/{{ document.id }}/delete">
+            <button class="btn btn-text btn-sm" type="submit" style="color: var(--md-sys-color-error);">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form method="post" action="/documents/defaults" class="card" style="margin-top: 16px;">
+  <h2 class="card-title">Default attachments</h2>
+  <p class="muted type-body-s">Selected documents are attached to every newly generated draft.</p>
+  <div class="chips">
+    {% for document in documents %}
+    <label class="chip {% if document.filename in defaults %}chip-selected{% endif %}">
+      <input type="checkbox" name="defaults" value="{{ document.filename }}"
+             {% if document.filename in defaults %}checked{% endif %}>
+      {{ document.filename }}
+    </label>
+    {% endfor %}
+  </div>
+  <button class="btn btn-tonal btn-sm" type="submit" style="margin-top: 12px;">Save defaults</button>
+</form>
+{% else %}
+<div class="card">
+  <div class="empty">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-upload"></use></svg>
+    <p>No documents yet</p>
+    <span class="type-body-s">Upload your CV, certificates, or program brochures to attach them to outreach.</span>
+    <button class="btn btn-filled btn-sm" type="button" data-dialog-open="#upload-dialog">Upload documents</button>
+  </div>
+</div>
+{% endif %}
+
+<dialog class="dialog" id="upload-dialog" aria-label="Upload documents">
+  <h2>Upload documents</h2>
+  <form method="post" action="/documents/upload" enctype="multipart/form-data">
+    <label class="field field-static">
+      <input type="file" name="files" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" multiple required>
+      <span>PDF, PNG, JPG, DOC, DOCX — {{ limits.max_file_mb }} MB max each</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn btn-text" type="button" data-dialog-close>Cancel</button>
+      <button class="btn btn-filled" type="submit">Upload</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

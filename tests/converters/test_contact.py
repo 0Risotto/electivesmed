@@ -73,3 +73,9 @@ def test_contact_from_input_maps_compliance_fields():
 
 def test_contact_from_input_defaults_to_unknown_basis():
     assert contact_from_input(ContactInput(name="A"), hospital_id=None).lawful_basis == "unknown"
+
+
+def test_contact_to_view_includes_country():
+    view = contact_to_view(Contact(name="A", country="DE"))
+
+    assert view.country == "DE"

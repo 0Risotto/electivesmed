@@ -19,15 +19,21 @@ def _read_yaml(path: Path) -> dict:
     return data
 
 
-def provide_settings(path: str | Path | None = None) -> Settings:
-    config_path = Path(path) if path else Path(
+def settings_path(path: str | Path | None = None) -> Path:
+    return Path(path) if path else Path(
         os.environ.get("EL_SETTINGS_PATH", DEFAULT_SETTINGS_PATH)
     )
-    return Settings.model_validate(_read_yaml(config_path))
+
+
+def profile_path(path: str | Path | None = None) -> Path:
+    return Path(path) if path else Path(
+        os.environ.get("EL_PROFILE_PATH", DEFAULT_PROFILE_PATH)
+    )
+
+
+def provide_settings(path: str | Path | None = None) -> Settings:
+    return Settings.model_validate(_read_yaml(settings_path(path)))
 
 
 def provide_profile(path: str | Path | None = None) -> Profile:
-    config_path = Path(path) if path else Path(
-        os.environ.get("EL_PROFILE_PATH", DEFAULT_PROFILE_PATH)
-    )
-    return Profile.model_validate(_read_yaml(config_path))
+    return Profile.model_validate(_read_yaml(profile_path(path)))
