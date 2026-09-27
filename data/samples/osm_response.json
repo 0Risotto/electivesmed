@@ -1,0 +1,35 @@
+{
+  "version": 0.6,
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Charité - Universitätsmedizin Berlin",
+        "addr:city": "Berlin",
+        "addr:country": "DE",
+        "website": "https://www.charite.de",
+        "healthcare": "hospital"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2002,
+      "tags": {
+        "amenity": "hospital",
+        "name": "St Thomas' Hospital",
+        "addr:city": "London",
+        "addr:country": "GB",
+        "contact:website": "https://www.guysandstthomas.nhs.uk"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3003,
+      "tags": {
+        "amenity": "hospital"
+      }
+    }
+  ]
+}

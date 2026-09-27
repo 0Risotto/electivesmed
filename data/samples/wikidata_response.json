@@ -1,0 +1,18 @@
+{
+  "head": {"vars": ["item", "itemLabel", "website", "countryCode", "cityLabel"]},
+  "results": {
+    "bindings": [
+      {
+        "item": {"type": "uri", "value": "http://www.wikidata.org/entity/Q4221"},
+        "itemLabel": {"type": "literal", "value": "Charité"},
+        "website": {"type": "literal", "value": "https://www.charite.de"},
+        "countryCode": {"type": "literal", "value": "DE"},
+        "cityLabel": {"type": "literal", "value": "Berlin"}
+      },
+      {
+        "item": {"type": "uri", "value": "http://www.wikidata.org/entity/Q9999999"},
+        "itemLabel": {"type": "literal", "value": "Q9999999"}
+      }
+    ]
+  }
+}

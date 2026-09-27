@@ -1,0 +1,23 @@
+{
+  "hospital_name": "Test Hospital",
+  "contacts": [
+    {
+      "name": "Jane Doe",
+      "title": "Chief Medical Officer",
+      "department": "Cardiology",
+      "email": "jane.doe@testhospital.org",
+      "confidence": 0.9,
+      "evidence": "Jane Doe, Chief Medical Officer"
+    },
+    {
+      "name": "",
+      "title": "ignored - no name"
+    },
+    {
+      "name": "No Email",
+      "title": "Chair",
+      "email": "not-an-email",
+      "confidence": "bad"
+    }
+  ]
+}

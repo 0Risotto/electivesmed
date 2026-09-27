@@ -1,0 +1,5 @@
+facility_name,address,city,state,country,hospital_type,website
+Charité - Universitätsmedizin Berlin,Charitéplatz 1,Berlin,,DE,University Hospital,https://www.charite.de
+St Thomas' Hospital,Westminster Bridge Road,London,,GB,Acute Care Hospitals,https://www.guysandstthomas.nhs.uk
+,Somewhere,,,,
+Toronto General Hospital,200 Elizabeth St,Toronto,ON,CA,Acute Care Hospitals,https://www.uhn.ca

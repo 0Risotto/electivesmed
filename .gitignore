@@ -13,3 +13,6 @@ data/cache/
 data/exports/
 nohup.out
 .DS_Store
+.coverage
+htmlcov/
+coverage.xml

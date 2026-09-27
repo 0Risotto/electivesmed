@@ -5,7 +5,7 @@ sender:
   email: ""            # e.g. you@yourdomain.com (SMTP_FROM in .env overrides)
   reply_to: ""
   organization: ""
-  postal_address: ""   # required by CAN-SPAM for commercial email footers
+  postal_address: ""   # required for US recipients (CAN-SPAM); appended as footer
 
 limits:
   daily_send_cap: 50
@@ -21,6 +21,16 @@ model:
 sending:
   dry_run_default: true
   include_opt_out: true
+  window_enabled: true          # enforce recipient-local send windows
+  window_days: [1, 2, 3]        # Monday=0 ... Sunday=6 (default Tue-Thu)
+  window_start: "09:00"
+  window_end: "17:00"
+
+compliance:
+  eu_policy: block              # block|warn: EU/EEA/UK recipients without lawful basis
+  us_policy: block              # block|warn: US recipients without postal address
+  retention_days: 730
+  jurisdiction_overrides: {}    # e.g. {"DE": {"requires_lawful_basis": false}}
 
 smtp:
   host: ""             # SMTP_HOST in .env overrides
@@ -29,5 +39,25 @@ smtp:
   from_email: ""
 
 sources:
-  cms_url: "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
-  user_agent: "hospital-outreach/0.1 (local research tool; contact: set-sender-email)"
+  user_agent: "electivesmed/0.1 (local research tool; contact: set-sender-email)"
+  # Add or remove sources here. type/parser pairs:
+  #   csv + cms_hospitals      CMS Hospital General Information (US)
+  #   csv + generic_csv        any hospital CSV (url or local path)
+  #   file + generic_csv       local CSV file (path)
+  #   overpass + osm           OpenStreetMap hospitals via Overpass (worldwide)
+  #   sparql + wikidata        Wikidata hospitals via SPARQL (worldwide)
+  entries:
+    - name: cms
+      type: csv
+      parser: cms_hospitals
+      url: "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
+      country: US
+      description: "CMS Hospital General Information (US, public domain)"
+    - name: osm
+      type: overpass
+      url: "https://overpass-api.de/api/interpreter"
+      description: "OpenStreetMap hospitals worldwide (Overpass API; set country to scope)"
+    - name: wikidata
+      type: sparql
+      url: "https://query.wikidata.org/sparql"
+      description: "Wikidata hospitals worldwide (SPARQL)"

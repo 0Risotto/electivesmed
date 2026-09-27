@@ -1,0 +1,4 @@
+name,title,department,email,hospital_name,city,state,website
+Jane Doe,Chief Medical Officer,Cardiology,jane.doe@testhospital.org,Test Hospital,Fresno,CA,
+John Smith,Department Chair,Oncology,john.smith@otherhospital.org,Other Hospital,Austin,TX,
+,,,,Hospital Without Person,,,

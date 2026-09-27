@@ -17,6 +17,6 @@ pkgs.mkShell {
     if ! command -v ho >/dev/null 2>&1; then
       uv pip install -e ".[dev]" -q
     fi
-    echo "hospital-outreach shell ready (python $(python -V 2>&1)); try: ho --help"
+    echo "electivesmed shell ready (python $(python -V 2>&1)); try: ho --help"
   '';
 }
